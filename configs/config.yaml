@@ -1,0 +1,32 @@
+app:
+  name: "Vani Voice AI Support"
+  version: "1.0.0"
+  env: "development"
+
+server:
+  host: "127.0.0.1"
+  port: 8000
+  debug: true
+
+logging:
+  level: "INFO"
+  mask_pii: true
+  pii_mask_char: "*"
+  log_to_file: true
+  log_file_path: "logs/vani.log"
+
+asr:
+  model_name: "whisper-turbo"
+  language: "multilingual" # English, Hindi, Hinglish
+
+nlu:
+  intent_confidence_threshold: 0.6
+  max_intents: 50
+
+dialogue:
+  session_timeout_seconds: 300
+  enable_llm_fallback: true
+
+tts:
+  model_name: "xtts"
+  voice: "female_calm"
