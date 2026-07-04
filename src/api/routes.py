@@ -39,7 +39,7 @@ class VoiceProcessRequest(BaseModel):
     audio_base64: str = Field(
         ..., 
         description="Base64 encoded string of user audio input",
-        example="UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="
+        json_schema_extra={"example": "UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="}
     )
 
 class VoiceProcessResponse(BaseModel):
