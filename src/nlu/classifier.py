@@ -1,70 +1,70 @@
-import abc
 import logging
 from typing import Dict, Any
 from src.core.config import settings
 
 logger = logging.getLogger("src.nlu.classifier")
 
-# Predefined list of sample intents from our future 50+ list
-SAMPLE_INTENTS = [
-    "order_status", "cancel_order", "return_product", "refund_request",
-    "update_address", "password_reset", "login_issue", "delivery_delay",
-    "agent_transfer", "greeting", "farewell", "payment_issue"
-]
-
-class BaseIntentClassifier(abc.ABC):
-    """Abstract base class for classifying user intents from text."""
-
-    @abc.abstractmethod
+class BaseIntentClassifier:
+    """Base class for Intent Classification."""
     def classify(self, text: str) -> Dict[str, Any]:
-        """Classifies the user intent from transcribed text.
-        
-        Args:
-            text: Transcribed user speech text.
-            
-        Returns:
-            Dict containing the identified intent and confidence score.
-        """
-        pass
+        raise NotImplementedError
 
 class MockIntentClassifier(BaseIntentClassifier):
-    """Mock intent classifier that matches predefined keywords to intents."""
-    
-    def classify(self, text: str) -> Dict[str, Any]:
-        logger.info("NLU Classifier: Processing text: %s", text)
-        
-        text_lower = text.lower()
-        intent = "unknown"
-        confidence = 0.0
+    """
+    Modular keyword and rule-based Intent Classifier for Vani.
+    Analyzes user transcript and returns classified intent and confidence score.
+    """
 
-        if "order" in text_lower or "status" in text_lower:
-            intent = "order_status"
-            confidence = 0.95
-        elif "cancel" in text_lower:
-            intent = "cancel_order"
-            confidence = 0.92
-        elif "refund" in text_lower:
-            intent = "refund_request"
-            confidence = 0.89
-        elif "address" in text_lower or "pata" in text_lower:
-            intent = "update_address"
-            confidence = 0.90
-        elif "password" in text_lower or "reset" in text_lower:
-            intent = "password_reset"
-            confidence = 0.94
-        elif "hello" in text_lower or "hi" in text_lower or "namaste" in text_lower:
-            intent = "greeting"
-            confidence = 0.99
+    def __init__(self):
+        # Define trigger keyword lists for each target intent
+        self.rules = {
+            "greeting": ["hello", "hi", "namaste", "hey", "good morning", "good evening", "greetings"],
+            "farewell": ["bye", "goodbye", "exit", "quit", "thank you", "thanks", "see you", "alvida"],
+            "order_status": ["order status", "track order", "where is my order", "order id", "check order", "my package", "delivery status"],
+            "password_reset": ["reset password", "change password", "forgot password", "password reset", "reset my pass", "account access"],
+            "update_address": ["update address", "change address", "new address", "shipping address", "delivery address", "update my address"]
+        }
+
+    def classify(self, text: str) -> Dict[str, Any]:
+        logger.info("NLU Classifier: Processing text: '%s'", text)
+        
+        text_lower = text.lower().strip()
+        
+        # Calculate matching scores based on keyword occurrences
+        scores = {}
+        for intent, keywords in self.rules.items():
+            matches = 0
+            for keyword in keywords:
+                if keyword in text_lower:
+                    # Grant higher weight for exact phrase matches
+                    matches += 1.5 if len(keyword.split()) > 1 else 1.0
             
-        # Enforce confidence threshold configured in configs/config.yaml
-        if confidence < settings.nlu.intent_confidence_threshold:
+            if matches > 0:
+                # Calculate simple normalized score
+                scores[intent] = min(0.99, 0.7 + (0.1 * matches))
+        
+        # Find the highest scoring intent
+        if scores:
+            best_intent = max(scores, key=scores.get)
+            best_score = scores[best_intent]
+        else:
+            best_intent = "unknown"
+            best_score = 0.0
+            
+        # Fallback if confidence is below threshold config
+        threshold = settings.nlu.intent_confidence_threshold
+        if best_score < threshold:
             logger.warning(
-                "NLU Classifier: Intent %s confidence %f below threshold %f. Falling back.",
-                intent, confidence, settings.nlu.intent_confidence_threshold
+                "NLU Classifier: Top intent '%s' (score: %.2f) below threshold %.2f. Falling back to unknown.",
+                best_intent, best_score, threshold
             )
-            intent = "unknown"
-            confidence = 0.0
+            best_intent = "unknown"
+            best_score = 0.0
             
-        result = {"intent": intent, "confidence": confidence}
-        logger.info("NLU Classifier: Classified intent: %s (confidence: %.2f)", intent, confidence)
+        result = {
+            "intent": best_intent,
+            "confidence": round(best_score, 2)
+        }
+        
+        logger.info("NLU Classifier Result: Intent: '%s', Confidence: %.2f", best_intent, best_score)
         return result
