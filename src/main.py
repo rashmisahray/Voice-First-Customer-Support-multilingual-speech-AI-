@@ -37,8 +37,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
+import os
+
 # Register routing
 app.include_router(router)
+
+# Mount static files for HTML UI frontend
+static_path = os.path.join(os.path.dirname(__file__), "static")
+app.mount("/static", StaticFiles(directory=static_path), name="static")
+
+@app.get("/")
+def redirect_to_frontend():
+    return RedirectResponse(url="/static/index.html")
 
 if __name__ == "__main__":
     # In execution, run programmatically if loaded directly

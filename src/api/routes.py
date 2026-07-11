@@ -1,63 +1,59 @@
 import base64
 import time
-from fastapi import APIRouter, HTTPException, BackgroundTasks
-from pydantic import BaseModel, Field
+import logging
 from typing import Dict, Any, Optional
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from pydantic import BaseModel, Field
 
 from src.core.config import settings
-from src.core.logger import logging
-from src.asr.base import MockASR
+from src.core.observability import observe, get_trace_url
+from src.asr.whisper_asr import WhisperASR
 from src.nlu.classifier import MockIntentClassifier
 from src.nlu.extractor import MockEntityExtractor
-from src.dialogue.manager import DialogueManager, DialogueState
-from src.tools.backend_client import BackendClient
+from src.dialogue.manager import DialogueManager
 from src.tts.base import MockTTS
 
 logger = logging.getLogger("src.api.routes")
 router = APIRouter()
 
-# Instantiate singletons/instances for routing
-# In real application, we might use dependency injection
-asr_service = MockASR()
+# Instantiate pipeline services
+# Whisper model can be tiny.en for local CPU execution
+asr_service = WhisperASR(model_size=settings.asr.model_name)
 nlu_classifier = MockIntentClassifier()
 nlu_extractor = MockEntityExtractor()
 dialogue_manager = DialogueManager()
-backend_client = BackendClient()
 tts_service = MockTTS()
 
 START_TIME = time.time()
 
 # Request/Response Schemas
 class HealthResponse(BaseModel):
-    status: str = Field(..., description="Application health status")
-    app_name: str = Field(..., description="Name of the application")
-    version: str = Field(..., description="Application version")
-    environment: str = Field(..., description="Running environment")
-    uptime_seconds: float = Field(..., description="Time since application started")
+    status: str
+    app_name: str
+    version: str
+    environment: str
+    uptime_seconds: float
 
 class VoiceProcessRequest(BaseModel):
-    audio_base64: str = Field(
-        ..., 
-        description="Base64 encoded string of user audio input",
-        json_schema_extra={"example": "UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="}
-    )
+    audio_base64: str = Field(..., description="Base64 encoded WAV audio data")
+    session_id: str = Field("default", description="Session identifier for multi-turn conversations")
 
 class VoiceProcessResponse(BaseModel):
-    transcript: str = Field(..., description="ASR transcribed user text")
-    intent: str = Field(..., description="Classified user intent")
-    intent_confidence: float = Field(..., description="NLU intent classifier score")
-    entities: Dict[str, Any] = Field(..., description="Extracted entities from text")
-    dialogue_state: str = Field(..., description="Dialogue manager state after transition")
-    response_text: str = Field(..., description="Assistant response text")
-    audio_response_base64: str = Field(..., description="Base64 encoded response audio from TTS")
-    backend_tool_executed: Optional[str] = Field(None, description="Name of the backend tool executed, if any")
-    backend_tool_result: Optional[Dict[str, Any]] = Field(None, description="Result of the backend tool execution")
+    transcript: str
+    intent: str
+    intent_confidence: float
+    entities: Dict[str, Any]
+    dialogue_state: str
+    response_text: str
+    audio_response_base64: str
+    backend_tool_executed: Optional[str] = None
+    backend_tool_result: Optional[Dict[str, Any]] = None
+    trace_url: Optional[str] = None
 
 @router.get("/health", response_model=HealthResponse)
 def get_health():
-    """Health status checkpoint of Vani services."""
+    """Health status checkpoint."""
     uptime = time.time() - START_TIME
-    logger.info("Health check queried. Uptime: %.2f seconds", uptime)
     return HealthResponse(
         status="healthy",
         app_name=settings.app.name,
@@ -66,61 +62,81 @@ def get_health():
         uptime_seconds=round(uptime, 2)
     )
 
-@router.post("/api/v1/voice/process-dummy", response_model=VoiceProcessResponse)
-def process_dummy_voice(payload: VoiceProcessRequest):
+@router.post("/api/v1/voice/process", response_model=VoiceProcessResponse)
+@observe(name="voice_process_pipeline")
+def process_voice_pipeline(payload: VoiceProcessRequest):
     """
-    Dummy pipeline endpoint simulating the voice processing workflow:
-    Audio Input -> ASR -> NLU -> Dialogue -> Backend Tool (optional) -> TTS -> Audio Output.
+    End-to-End Voice AI processing pipeline:
+    Base64 Audio Input -> ASR -> NLU -> Dialogue Manager -> Backend Tool -> TTS -> Audio Playback.
     """
-    logger.info("Voice dummy endpoint invoked.")
+    logger.info("Voice API: Processing base64 audio payload for session: %s", payload.session_id)
     
-    # 1. Decode raw input audio
+    # 1. Decode base64 audio string to raw WAV bytes
     try:
         audio_bytes = base64.b64decode(payload.audio_base64)
     except Exception as e:
-        logger.error("Failed to decode base64 audio: %s", e)
+        logger.error("Voice API: Failed to decode base64 payload: %s", e)
         raise HTTPException(status_code=400, detail="Invalid base64 encoded audio data")
+        
+    return execute_pipeline(audio_bytes, payload.session_id)
 
-    # 2. ASR transcription
-    transcript = asr_service.transcribe(audio_bytes)
+@router.post("/api/v1/voice/upload", response_model=VoiceProcessResponse)
+@observe(name="voice_upload_pipeline")
+async def process_voice_upload(
+    file: UploadFile = File(..., description="Uploaded WAV audio file"),
+    session_id: str = Form("default", description="Session identifier")
+):
+    """
+    End-to-End Voice AI pipeline accepting a direct audio file upload.
+    """
+    logger.info("Voice API: Processing uploaded file '%s' for session: %s", file.filename, session_id)
     
-    # 3. NLU processing
-    classification = nlu_classifier.classify(transcript)
-    intent = classification["intent"]
-    confidence = classification["confidence"]
+    # Read audio bytes
+    audio_bytes = await file.read()
+    return execute_pipeline(audio_bytes, session_id)
+
+def execute_pipeline(audio_bytes: bytes, session_id: str) -> VoiceProcessResponse:
+    """Helper executing all pipeline steps sequentially."""
+    
+    # 1. ASR - Automatic Speech Recognition (convert audio to text)
+    try:
+        transcript = asr_service.transcribe(audio_bytes)
+    except Exception as e:
+        logger.error("Voice Pipeline Error during ASR: %s", e)
+        raise HTTPException(status_code=422, detail=f"ASR Transcription failed: {e}")
+        
+    # If silence or empty transcript
+    if not transcript.strip():
+        transcript = "[Silence]"
+        
+    # 2. NLU Intent Classification
+    nlu_res = nlu_classifier.classify(transcript)
+    intent = nlu_res["intent"]
+    confidence = nlu_res["confidence"]
+    
+    # 3. NLU Entity Extraction
     entities = nlu_extractor.extract(transcript)
     
-    # 4. Backend tool call execution (conditional on intent)
-    tool_executed = None
-    tool_result = None
+    # 4. Dialogue Management & Tool Execution
+    dialogue_res = dialogue_manager.process_turn(intent, entities, transcript, session_id)
+    response_text = dialogue_res["response"]
+    next_state = dialogue_res["state"]
+    tool_executed = dialogue_res["tool_executed"]
+    tool_result = dialogue_res["tool_result"]
     
-    if intent == "order_status" and "order_id" in entities:
-        tool_executed = "get_order_status"
-        tool_result = backend_client.get_order_status(entities["order_id"])
-        # Update/override dialogue if tool yields response
-        if tool_result.get("success"):
-            # Provide real data back, preventing hallucinations
-            # Let's log it safely (PII masking will redact sensitive logs)
-            logger.info("Executed tool get_order_status for %s successfully.", entities["order_id"])
-        else:
-            logger.warning("Failed to fetch order status for %s.", entities["order_id"])
-            
-    # 5. Dialogue processing
-    dialogue_result = dialogue_manager.process_turn(intent, entities, transcript)
-    response_text = dialogue_result["response"]
-    next_state = dialogue_result["state"]
-    
-    # 6. TTS response synthesis
-    response_audio_bytes = tts_service.synthesize(response_text)
+    # 5. TTS Response Synthesis (convert text to audio)
+    try:
+        response_audio_bytes = tts_service.synthesize(response_text)
+    except Exception as e:
+        logger.error("Voice Pipeline Error during TTS: %s", e)
+        response_audio_bytes = b"RIFFdummybytes"
+        
     response_audio_b64 = base64.b64encode(response_audio_bytes).decode("utf-8")
     
-    # 7. Safe logs test (Verify PII masking by writing sensitive content in logs)
-    logger.info("Turn Completed. User: '%s'. Intent: '%s'. Entities: %s. Response: '%s'", 
-                transcript, intent, entities, response_text)
+    # Get Langfuse trace URL if enabled
+    trace_url = get_trace_url()
     
-    # Note: sensitive details like email/phones/order IDs in logs will be masked by our PIIMaskingFilter!
-    # For example, if the user mentioned a phone number or email, it will be automatically masked.
-    
+    logger.info("Voice Pipeline: Completed turn successfully for session %s.", session_id)
     return VoiceProcessResponse(
         transcript=transcript,
         intent=intent,
@@ -130,5 +146,6 @@ def process_dummy_voice(payload: VoiceProcessRequest):
         response_text=response_text,
         audio_response_base64=response_audio_b64,
         backend_tool_executed=tool_executed,
-        backend_tool_result=tool_result
+        backend_tool_result=tool_result,
+        trace_url=trace_url
     )

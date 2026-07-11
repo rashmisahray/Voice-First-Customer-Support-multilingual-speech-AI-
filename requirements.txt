@@ -5,3 +5,11 @@ pydantic-settings>=2.0.0
 pyyaml>=6.0
 pytest>=7.3.0
 httpx>=0.24.0
+faster-whisper>=1.0.0
+gTTS>=2.3.0
+elevenlabs>=1.0.0
+langfuse>=2.0.0
+numpy>=1.20.0
+scipy>=1.7.0
+python-multipart>=0.0.12
+
