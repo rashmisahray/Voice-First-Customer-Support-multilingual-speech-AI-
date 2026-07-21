@@ -13,7 +13,7 @@ class MockEntityExtractor(BaseEntityExtractor):
     """
     Regex-based Entity Extractor for Vani.
     Extracts Order IDs, phone numbers, email addresses, and address strings.
-    Handles formatting (commas, spaces) and ASR phonetic spoken variations.
+    Handles formatting (commas, spaces) and ASR phonetic spoken variations (e.g. adurate -> @).
     """
 
     def extract(self, text: str) -> Dict[str, Any]:
@@ -36,16 +36,13 @@ class MockEntityExtractor(BaseEntityExtractor):
             entities["phone_number"] = phone_match.group(1)
             logger.info("NLU Extractor: Extracted Phone Number: %s", entities["phone_number"])
 
-        # 3. Email: Standard email pattern & spoken ASR variations (e.g. "johnatexample.com", "john at example dot com")
-        email_match = re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', cleaned_text)
-        if not email_match:
-            # Handle phonetic variations produced by ASR e.g. "johnatexample.com", "my mail john@example.com"
-            spoken_email = re.sub(r'\s+at\s+', '@', cleaned_text, flags=re.IGNORECASE)
-            spoken_email = re.sub(r'\s+dot\s+', '.', spoken_email, flags=re.IGNORECASE)
-            spoken_email = re.sub(r'([a-zA-Z0-9._%+-]+)(?:atexample|erdarytexample|at)\.com', r'\1@example.com', spoken_email, flags=re.IGNORECASE)
-            spoken_email = re.sub(r'([a-zA-Z0-9._%+-]+)at([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', r'\1@\2', spoken_email, flags=re.IGNORECASE)
-            email_match = re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', spoken_email)
+        # 3. Email: Standard email pattern & spoken ASR phonetic variations
+        # Normalize spoken '@' pronunciations: "adurate", "ad rate", "at rate", "atrate", "drate", "at"
+        spoken_text = re.sub(r'adurate|ad\s*rate|at\s*rate|atrate|drate|\bat\b', '@', cleaned_text, flags=re.IGNORECASE)
+        spoken_text = re.sub(r'\s*@\s*', '@', spoken_text)
+        spoken_text = re.sub(r'\s+dot\s+', '.', spoken_text, flags=re.IGNORECASE)
 
+        email_match = re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', spoken_text)
         if email_match:
             entities["email"] = email_match.group(0).lower()
             logger.info("NLU Extractor: Extracted Email: %s", entities["email"])

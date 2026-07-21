@@ -13,7 +13,7 @@ logger = logging.getLogger("src.asr.whisper_asr")
 HINGLISH_INITIAL_PROMPT = (
     "A multilingual customer support voice conversation in Hindi, English, and Hinglish. "
     "Main apna order status check karna chahta hoon, order ID 876543, mera password reset kar do, "
-    "email address, update address, phone number, namaste, dhanyawad."
+    "email address john@example.com, user@example.com, @, at the rate, update address, phone number, namaste, dhanyawad."
 )
 
 class WhisperASR:
