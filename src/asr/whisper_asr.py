@@ -109,11 +109,11 @@ class WhisperASR:
         except Exception as wav_err:
             logger.info("Standard WAV parsing not applicable. Using PyAV tempfile decoding for browser stream...")
             # 2. Fall back to PyAV tempfile decoding for WebM, Ogg, MP3, etc.
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp:
-                tmp.write(audio_bytes)
-                tmp_path = tmp.name
-            
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".webm")
+            tmp_path = tmp.name
             try:
+                tmp.write(audio_bytes)
+                tmp.close()  # Close file handle so Windows permits PyAV to open it
                 segments_gen, info = self.model.transcribe(tmp_path, beam_size=5)
                 segments = list(segments_gen)
             except Exception as pyav_err:
