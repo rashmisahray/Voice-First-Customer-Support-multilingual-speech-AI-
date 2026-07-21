@@ -721,18 +721,29 @@
         function uploadAudioBlob(blob) {
             resetPipelineUI();
             
+            if (!blob || blob.size < 100) {
+                document.getElementById("record-status").innerText = "Recording was too short. Please speak while holding record.";
+                updateCard("card-asr", "error", "Audio payload empty or too short. Please speak clearly into your microphone.");
+                return;
+            }
+            
             const sessionId = document.getElementById("session-id").value;
             const formData = new FormData();
-            const ext = blob.type.includes('webm') ? 'webm' : 'wav';
+            const ext = (blob.type && blob.type.includes('webm')) ? 'webm' : 'wav';
             formData.append("file", blob, `mic_input.${ext}`);
             formData.append("session_id", sessionId);
 
-            fetch("/api/v1/voice/upload", {
+            // Determine API base URL (fallback to http://127.0.0.1:8000 if opened via file:// or another port)
+            const apiEndpoint = (window.location.protocol.startsWith('http') && window.location.port === '8000') 
+                ? '/api/v1/voice/upload' 
+                : 'http://127.0.0.1:8000/api/v1/voice/upload';
+
+            fetch(apiEndpoint, {
                 method: "POST",
                 body: formData
             })
             .then(res => {
-                if (!res.ok) throw new Error("Server processed with code: " + res.status);
+                if (!res.ok) throw new Error("Server response code: " + res.status);
                 return res.json();
             })
             .then(data => {
@@ -741,7 +752,7 @@
             })
             .catch(err => {
                 console.error("Pipeline failure:", err);
-                updateCard("card-asr", "error", "ASR Transcription failed. Please make sure you are uploading/recording a valid audio WAV file.");
+                updateCard("card-asr", "error", `Audio processing issue: ${err.message || err}. Ensure backend server is running on port 8000.`);
                 document.getElementById("record-status").innerText = "Failed to process audio.";
             });
         }

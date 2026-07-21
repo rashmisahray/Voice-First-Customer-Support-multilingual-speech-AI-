@@ -86,6 +86,14 @@ class WhisperASR:
         Returns:
             Dict containing 'text', 'language', and 'language_probability'.
         """
+        if not audio_bytes or len(audio_bytes) < 100:
+            logger.warning("ASR: Audio payload is empty or too short (%d bytes).", len(audio_bytes) if audio_bytes else 0)
+            return {
+                "text": "[Silence]",
+                "language": "en",
+                "language_probability": 0.0
+            }
+
         self._load_model()
         
         logger.info("ASR: Transcribing audio payload (size: %d bytes)...", len(audio_bytes))
@@ -108,6 +116,13 @@ class WhisperASR:
             try:
                 segments_gen, info = self.model.transcribe(tmp_path, beam_size=5)
                 segments = list(segments_gen)
+            except Exception as pyav_err:
+                logger.error("PyAV audio decoding failed: %s. Returning silence fallback.", pyav_err)
+                return {
+                    "text": "[Silence]",
+                    "language": "en",
+                    "language_probability": 0.0
+                }
             finally:
                 if os.path.exists(tmp_path):
                     try:
@@ -117,7 +132,9 @@ class WhisperASR:
         
         # Merge transcript segments
         transcript_text = " ".join([segment.text for segment in segments]).strip()
-        
+        if not transcript_text:
+            transcript_text = "[Silence]"
+            
         detected_language = info.language if hasattr(info, "language") and info.language else "en"
         prob = info.language_probability if hasattr(info, "language_probability") and info.language_probability else 1.0
         
