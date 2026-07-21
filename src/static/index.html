@@ -642,6 +642,10 @@
         let mediaRecorder;
         let audioChunks = [];
         let isRecording = false;
+        let activeStream = null;
+        let audioCtx = null;
+        let analyser = null;
+        let animId = null;
 
         function updateCard(cardId, status, contentHtml) {
             const card = document.getElementById(cardId);
@@ -683,37 +687,76 @@
                 // Start Recording
                 audioChunks = [];
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    // Use standard audio/wav or pcm if supported, standard webm is default,
-                    // but we will send standard audio blob.
-                    // Note: modern browsers record in webm/ogg. Since we need WAV for pure wave module,
-                    // we will send the raw blob, and fallback if necessary, or the API upload accepts UploadFile.
-                    // In real cases, we can record in WAV via a lightweight script or handle WebM downconversion.
-                    // For local HTML compatibility, let's record and upload the recorded audio!
-                    mediaRecorder = new MediaRecorder(stream);
+                    activeStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(activeStream);
+                    
+                    // Setup Web Audio API volume meter
+                    try {
+                        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                        const source = audioCtx.createMediaStreamSource(activeStream);
+                        analyser = audioCtx.createAnalyser();
+                        analyser.fftSize = 64;
+                        source.connect(analyser);
+                        
+                        const bars = document.querySelectorAll(".wave-bar");
+                        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                        
+                        function monitorVolume() {
+                            if (!isRecording) return;
+                            analyser.getByteFrequencyData(dataArray);
+                            let sum = 0;
+                            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                            let avg = sum / dataArray.length;
+                            
+                            // Scale bar heights based on live volume
+                            bars.forEach((bar, idx) => {
+                                let h = Math.max(6, Math.min(32, (avg / 3) + Math.random() * 6));
+                                bar.style.height = `${h}px`;
+                            });
+                            animId = requestAnimationFrame(monitorVolume);
+                        }
+                        monitorVolume();
+                    } catch (e) {
+                        console.warn("Web Audio meter init skipped:", e);
+                    }
+
                     mediaRecorder.ondataavailable = e => {
-                        audioChunks.push(e.data);
+                        if (e.data && e.data.size > 0) {
+                            audioChunks.push(e.data);
+                        }
                     };
+
                     mediaRecorder.onstop = () => {
+                        if (animId) cancelAnimationFrame(animId);
+                        if (audioCtx) { audioCtx.close(); audioCtx = null; }
+                        if (activeStream) {
+                            activeStream.getTracks().forEach(track => track.stop());
+                            activeStream = null;
+                        }
+                        
                         const mime = mediaRecorder.mimeType || 'audio/webm';
                         const audioBlob = new Blob(audioChunks, { type: mime });
                         uploadAudioBlob(audioBlob);
                     };
 
-                    mediaRecorder.start();
+                    // Record chunks every 250ms
+                    mediaRecorder.start(250);
                     isRecording = true;
                     btn.classList.add("recording");
-                    statusText.innerText = "Recording... Click to stop";
+                    statusText.innerText = "🎤 Listening... Click button again when finished speaking!";
                 } catch (err) {
-                    console.error("Mic access denied:", err);
-                    alert("Error: Microphone access is required.");
+                    console.error("Mic access error:", err);
+                    statusText.innerText = "❌ Mic access denied. Check browser permissions.";
+                    alert("Microphone Error: Please allow microphone permissions in your browser address bar.");
                 }
             } else {
                 // Stop Recording
-                mediaRecorder.stop();
                 isRecording = false;
                 btn.classList.remove("recording");
                 statusText.innerText = "Processing voice...";
+                if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                    mediaRecorder.stop();
+                }
             }
         }
 
