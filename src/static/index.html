@@ -795,7 +795,7 @@
             })
             .catch(err => {
                 console.error("Pipeline failure:", err);
-                updateCard("card-asr", "error", `Audio processing issue: ${err.message || err}. Ensure backend server is running on port 8000.`);
+                updateCard("card-asr", "error", `Audio Processing Issue: ${err.message || err}.<br><br>💡 <b>Quick Fix Checklist</b>:<br>1. Make sure your server is running in terminal: <code>.venv\\Scripts\\python -m uvicorn src.main:app --reload --port 8000</code><br>2. Access the UI via <a href="http://127.0.0.1:8000/static/index.html" target="_blank" style="color:#818cf8; text-decoration:underline;">http://127.0.0.1:8000/static/index.html</a>`);
                 document.getElementById("record-status").innerText = "Failed to process audio.";
             });
         }
