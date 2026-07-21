@@ -1,6 +1,8 @@
 import io
 import wave
 import logging
+import tempfile
+import os
 from typing import Dict, Any, Tuple
 import numpy as np
 from src.core.config import settings
@@ -70,28 +72,48 @@ class WhisperASR:
                 
                 return audio_float
         except Exception as e:
-            logger.error("Failed to parse WAV bytes directly: %s.", e)
-            raise ValueError(f"Invalid or corrupted WAV file: {e}")
+            logger.info("Direct WAV byte parsing skipped: %s.", e)
+            raise ValueError(f"Not a standard WAV stream: {e}")
 
     def transcribe_with_meta(self, audio_bytes: bytes) -> Dict[str, Any]:
         """
-        Transcribes raw WAV audio bytes into text with automatic language detection metadata.
+        Transcribes audio bytes into text with automatic language detection metadata.
+        Supports in-memory WAV parsing and automatic PyAV decoding for WebM/Ogg/MP3 browser streams.
         
         Args:
-            audio_bytes: In-memory bytes representing a WAV file.
+            audio_bytes: In-memory audio bytes (WAV, WebM, Ogg, MP3).
             
         Returns:
             Dict containing 'text', 'language', and 'language_probability'.
         """
         self._load_model()
         
-        logger.info("ASR: Transcribing audio file (size: %d bytes)...", len(audio_bytes))
+        logger.info("ASR: Transcribing audio payload (size: %d bytes)...", len(audio_bytes))
         
-        # Convert WAV bytes to 16kHz float32 numpy array
-        audio_numpy = self.wav_bytes_to_numpy_16k(audio_bytes)
+        segments = []
+        info = None
         
-        # Transcribe audio numpy array with automatic language detection
-        segments, info = self.model.transcribe(audio_numpy, beam_size=5)
+        # 1. Try fast in-memory WAV numpy parsing
+        try:
+            audio_numpy = self.wav_bytes_to_numpy_16k(audio_bytes)
+            segments_gen, info = self.model.transcribe(audio_numpy, beam_size=5)
+            segments = list(segments_gen)
+        except Exception as wav_err:
+            logger.info("Standard WAV parsing not applicable. Using PyAV tempfile decoding for browser stream...")
+            # 2. Fall back to PyAV tempfile decoding for WebM, Ogg, MP3, etc.
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp:
+                tmp.write(audio_bytes)
+                tmp_path = tmp.name
+            
+            try:
+                segments_gen, info = self.model.transcribe(tmp_path, beam_size=5)
+                segments = list(segments_gen)
+            finally:
+                if os.path.exists(tmp_path):
+                    try:
+                        os.remove(tmp_path)
+                    except Exception as clean_err:
+                        logger.warning("Could not remove temp audio file: %s", clean_err)
         
         # Merge transcript segments
         transcript_text = " ".join([segment.text for segment in segments]).strip()
@@ -111,7 +133,7 @@ class WhisperASR:
 
     def transcribe(self, audio_bytes: bytes) -> str:
         """
-        Transcribes raw WAV audio bytes into text string (backwards compatible).
+        Transcribes raw audio bytes into text string (backwards compatible).
         """
         meta = self.transcribe_with_meta(audio_bytes)
         return meta["text"]

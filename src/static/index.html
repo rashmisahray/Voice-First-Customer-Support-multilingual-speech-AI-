@@ -695,7 +695,8 @@
                         audioChunks.push(e.data);
                     };
                     mediaRecorder.onstop = () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const mime = mediaRecorder.mimeType || 'audio/webm';
+                        const audioBlob = new Blob(audioChunks, { type: mime });
                         uploadAudioBlob(audioBlob);
                     };
 
@@ -722,7 +723,8 @@
             
             const sessionId = document.getElementById("session-id").value;
             const formData = new FormData();
-            formData.append("file", blob, "mic_input.wav");
+            const ext = blob.type.includes('webm') ? 'webm' : 'wav';
+            formData.append("file", blob, `mic_input.${ext}`);
             formData.append("session_id", sessionId);
 
             fetch("/api/v1/voice/upload", {
