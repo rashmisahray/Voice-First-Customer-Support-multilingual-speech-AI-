@@ -16,8 +16,8 @@ logging:
   log_file_path: "logs/vani.log"
 
 asr:
-  model_name: "whisper-turbo"
-  language: "multilingual" # English, Hindi, Hinglish
+  model_name: "base"
+  language: "auto" # English, Hindi, Hinglish automatic detection
 
 nlu:
   intent_confidence_threshold: 0.6

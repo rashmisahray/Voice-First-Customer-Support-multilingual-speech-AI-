@@ -755,7 +755,8 @@
 
         function renderPipelineResults(data) {
             // 1. ASR
-            updateCard("card-asr", "success", `Transcribed: <span class="result-highlight">"${data.transcript}"</span>`);
+            let langInfo = data.language ? ` <span class="step-badge" style="background: rgba(99, 102, 241, 0.2); color: #818cf8;">Lang: ${data.language.toUpperCase()} (${Math.round((data.language_probability||1.0)*100)}%)</span>` : '';
+            updateCard("card-asr", "success", `Transcribed: <span class="result-highlight">"${data.transcript}"</span>${langInfo}`);
             
             // 2. Intent
             updateCard("card-nlu-intent", "success", `Intent: <span class="result-highlight">${data.intent}</span> (Confidence: ${data.intent_confidence})`);

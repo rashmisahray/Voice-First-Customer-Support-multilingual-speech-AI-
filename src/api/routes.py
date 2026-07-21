@@ -17,7 +17,6 @@ logger = logging.getLogger("src.api.routes")
 router = APIRouter()
 
 # Instantiate pipeline services
-# Whisper model can be tiny.en for local CPU execution
 asr_service = WhisperASR(model_size=settings.asr.model_name)
 nlu_classifier = MockIntentClassifier()
 nlu_extractor = MockEntityExtractor()
@@ -40,6 +39,8 @@ class VoiceProcessRequest(BaseModel):
 
 class VoiceProcessResponse(BaseModel):
     transcript: str
+    language: Optional[str] = "en"
+    language_probability: Optional[float] = 1.0
     intent: str
     intent_confidence: float
     entities: Dict[str, Any]
@@ -67,7 +68,7 @@ def get_health():
 def process_voice_pipeline(payload: VoiceProcessRequest):
     """
     End-to-End Voice AI processing pipeline:
-    Base64 Audio Input -> ASR -> NLU -> Dialogue Manager -> Backend Tool -> TTS -> Audio Playback.
+    Base64 Audio Input -> Multilingual ASR -> NLU -> Dialogue Manager -> Backend Tool -> TTS -> Audio Playback.
     """
     logger.info("Voice API: Processing base64 audio payload for session: %s", payload.session_id)
     
@@ -98,9 +99,12 @@ async def process_voice_upload(
 def execute_pipeline(audio_bytes: bytes, session_id: str) -> VoiceProcessResponse:
     """Helper executing all pipeline steps sequentially."""
     
-    # 1. ASR - Automatic Speech Recognition (convert audio to text)
+    # 1. ASR - Automatic Speech Recognition with language detection
     try:
-        transcript = asr_service.transcribe(audio_bytes)
+        asr_res = asr_service.transcribe_with_meta(audio_bytes)
+        transcript = asr_res["text"]
+        detected_language = asr_res.get("language", "en")
+        language_probability = asr_res.get("language_probability", 1.0)
     except Exception as e:
         logger.error("Voice Pipeline Error during ASR: %s", e)
         raise HTTPException(status_code=422, detail=f"ASR Transcription failed: {e}")
@@ -136,9 +140,11 @@ def execute_pipeline(audio_bytes: bytes, session_id: str) -> VoiceProcessRespons
     # Get Langfuse trace URL if enabled
     trace_url = get_trace_url()
     
-    logger.info("Voice Pipeline: Completed turn successfully for session %s.", session_id)
+    logger.info("Voice Pipeline: Completed turn successfully for session %s (Language: %s).", session_id, detected_language)
     return VoiceProcessResponse(
         transcript=transcript,
+        language=detected_language,
+        language_probability=language_probability,
         intent=intent,
         intent_confidence=confidence,
         entities=entities,
