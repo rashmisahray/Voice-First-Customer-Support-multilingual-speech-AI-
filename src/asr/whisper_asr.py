@@ -9,6 +9,13 @@ from src.core.config import settings
 
 logger = logging.getLogger("src.asr.whisper_asr")
 
+# Prompt priming Whisper for Indian English, Hindi, and Hinglish code-mixed customer support vocabulary
+HINGLISH_INITIAL_PROMPT = (
+    "A multilingual customer support voice conversation in Hindi, English, and Hinglish. "
+    "Main apna order status check karna chahta hoon, order ID 876543, mera password reset kar do, "
+    "email address, update address, phone number, namaste, dhanyawad."
+)
+
 class WhisperASR:
     """ASR implementation using faster-whisper supporting multilingual speech (English, Hindi, Hinglish)."""
 
@@ -28,8 +35,7 @@ class WhisperASR:
     def wav_bytes_to_numpy_16k(self, audio_bytes: bytes) -> np.ndarray:
         """
         Parses standard WAV format bytes directly in memory.
-        Bypasses the system FFmpeg requirement by converting the WAV binary
-        directly to a 16000Hz float32 mono numpy array.
+        Bypasses system FFmpeg by converting WAV binary directly to 16000Hz float32 mono numpy array.
         """
         try:
             with wave.open(io.BytesIO(audio_bytes), "rb") as wav_file:
@@ -101,10 +107,19 @@ class WhisperASR:
         segments = []
         info = None
         
+        # Transcribe kwargs optimizing for Hinglish / Hindi / English code-mixed speech recognition
+        transcribe_kwargs = {
+            "beam_size": 5,
+            "task": "transcribe",
+            "initial_prompt": HINGLISH_INITIAL_PROMPT,
+            "vad_filter": True,
+            "vad_parameters": dict(min_silence_duration_ms=500)
+        }
+
         # 1. Try fast in-memory WAV numpy parsing
         try:
             audio_numpy = self.wav_bytes_to_numpy_16k(audio_bytes)
-            segments_gen, info = self.model.transcribe(audio_numpy, beam_size=5)
+            segments_gen, info = self.model.transcribe(audio_numpy, **transcribe_kwargs)
             segments = list(segments_gen)
         except Exception as wav_err:
             logger.info("Standard WAV parsing not applicable. Using PyAV tempfile decoding for browser stream...")
@@ -114,7 +129,7 @@ class WhisperASR:
             try:
                 tmp.write(audio_bytes)
                 tmp.close()  # Close file handle so Windows permits PyAV to open it
-                segments_gen, info = self.model.transcribe(tmp_path, beam_size=5)
+                segments_gen, info = self.model.transcribe(tmp_path, **transcribe_kwargs)
                 segments = list(segments_gen)
             except Exception as pyav_err:
                 logger.error("PyAV audio decoding failed: %s. Returning silence fallback.", pyav_err)
