@@ -1,6 +1,6 @@
 import logging
+from typing import Dict, Any, Optional
 from enum import Enum
-from typing import Dict, Any, List, Tuple
 from src.core.config import settings
 from src.tools.backend_client import BackendClient
 
@@ -12,39 +12,37 @@ class DialogueState(str, Enum):
     AWAITING_EMAIL = "awaiting_email"
     AWAITING_PHONE = "awaiting_phone"
     AWAITING_ADDRESS = "awaiting_address"
-    COMPLETED = "completed"
     FALLBACK = "fallback"
 
 class DialogueManager:
     """
-    Dialogue Manager state machine.
-    Manages session states, prompts for missing slot values, and triggers backend tools.
+    State-machine based Dialogue Manager for Vani.
+    Tracks session state, manages slot filling, supports dynamic intent switching, and executes backend tool calls.
     """
 
-    def __init__(self):
-        # Dictionary mapping session_id -> session_data
+    def __init__(self, backend_client: Optional[BackendClient] = None):
         self.sessions: Dict[str, Dict[str, Any]] = {}
-        self.backend_client = BackendClient()
+        self.backend_client = backend_client or BackendClient()
+        logger.info("Initializing DialogueManager with BackendClient.")
 
     def _get_or_create_session(self, session_id: str) -> Dict[str, Any]:
+        """Retrieves an existing dialogue session or initializes a new state container."""
         if session_id not in self.sessions:
             logger.info("Dialogue Manager: Initializing new dialogue session: %s", session_id)
             self.sessions[session_id] = {
                 "state": DialogueState.IDLE,
-                "history": [],
-                "context": {}
+                "context": {},
+                "history": []
             }
         return self.sessions[session_id]
 
     def reset_session(self, session_id: str):
-        """Resets the state and context of a specific session."""
+        """Resets the state and context of a dialogue session."""
         if session_id in self.sessions:
-            self.sessions[session_id] = {
-                "state": DialogueState.IDLE,
-                "history": [],
-                "context": {}
-            }
-            logger.info("Dialogue Manager: Session %s has been reset.", session_id)
+            self.sessions[session_id]["state"] = DialogueState.IDLE
+            self.sessions[session_id]["context"].clear()
+            self.sessions[session_id]["history"].clear()
+            logger.info("Dialogue Manager: Session %s reset to IDLE.", session_id)
 
     def process_turn(
         self, 
@@ -54,7 +52,7 @@ class DialogueManager:
         session_id: str = "default"
     ) -> Dict[str, Any]:
         """
-        Processes a single conversation turn for a session.
+        Processes a single conversational turn.
         
         Args:
             intent: Classified intent name.
@@ -63,7 +61,7 @@ class DialogueManager:
             session_id: Unique session identifier.
             
         Returns:
-            Dict containing the dialogue response text, next state, and details of any executed tools.
+            Dict containing response text, next state, and details of executed tools.
         """
         session = self._get_or_create_session(session_id)
         current_state = session["state"]
@@ -85,26 +83,53 @@ class DialogueManager:
         for k, v in entities.items():
             context[k] = v
 
-        # 2. Check for Global Intent Interruptions (e.g. Greeting or Goodbye)
+        # 2. Global Interruption Check (Greetings or Goodbyes)
         if intent == "greeting":
             session["state"] = DialogueState.IDLE
             context.clear()
             response_text = "Hello! Welcome to Vani Customer Support. How can I help you today? You can check order status, reset password, or update address."
             session["history"].append({"speaker": "assistant", "text": response_text})
-            return {"response": response_text, "state": session["state"]}
+            return {"response": response_text, "state": session["state"], "tool_executed": None, "tool_result": None}
             
         elif intent == "farewell":
             session["state"] = DialogueState.IDLE
             context.clear()
             response_text = "Thank you for choosing Vani Customer Support. Have a wonderful day ahead! Namaste."
             session["history"].append({"speaker": "assistant", "text": response_text})
-            return {"response": response_text, "state": session["state"]}
+            return {"response": response_text, "state": session["state"], "tool_executed": None, "tool_result": None}
 
-        # 3. State Machine Transition Logic
+        # 3. Intent Switching Logic: If user is in an awaiting state but provides a NEW intent or entity
+        if current_state != DialogueState.IDLE:
+            # Check if entities for a DIFFERENT intent were supplied
+            if "email" in entities and current_state != DialogueState.AWAITING_EMAIL:
+                intent = "password_reset"
+            elif "order_id" in entities and current_state != DialogueState.AWAITING_ORDER_ID:
+                intent = "order_status"
+            elif ("phone_number" in entities or "address" in entities) and current_state not in [DialogueState.AWAITING_PHONE, DialogueState.AWAITING_ADDRESS]:
+                intent = "update_address"
+
+            # Determine expected intent for current state
+            expected_intent = None
+            if current_state == DialogueState.AWAITING_ORDER_ID:
+                expected_intent = "order_status"
+            elif current_state == DialogueState.AWAITING_EMAIL:
+                expected_intent = "password_reset"
+            elif current_state in [DialogueState.AWAITING_PHONE, DialogueState.AWAITING_ADDRESS]:
+                expected_intent = "update_address"
+
+            # If the user switched intent, clear current awaiting state
+            if intent != "unknown" and intent != expected_intent:
+                logger.info("Dialogue Manager: Switching intent from %s to %s", current_state, intent)
+                session["state"] = DialogueState.IDLE
+                current_state = DialogueState.IDLE
+                context.clear()
+                for k, v in entities.items():
+                    context[k] = v
+
+        # 4. State Machine Transition Logic
         if current_state == DialogueState.IDLE:
             if intent == "order_status":
                 if "order_id" in context:
-                    # Slot filled. Call backend tool.
                     order_id = context["order_id"]
                     tool_executed = "get_order_status"
                     tool_result = self.backend_client.get_order_status(order_id)
@@ -116,13 +141,11 @@ class DialogueManager:
                     session["state"] = DialogueState.IDLE
                     context.clear()
                 else:
-                    # Missing Order ID slot
                     session["state"] = DialogueState.AWAITING_ORDER_ID
-                    response_text = "I'd be happy to check your order status. Could you please provide your 6-digit Order ID?"
+                    response_text = "I'd be happy to check your order status. Could you please state your 6-digit Order ID?"
 
             elif intent == "password_reset":
                 if "email" in context:
-                    # Slot filled. Call backend tool.
                     email = context["email"]
                     tool_executed = "reset_password"
                     tool_result = self.backend_client.reset_password(email)
@@ -130,14 +153,12 @@ class DialogueManager:
                     session["state"] = DialogueState.IDLE
                     context.clear()
                 else:
-                    # Missing Email slot
                     session["state"] = DialogueState.AWAITING_EMAIL
                     response_text = "Sure, I can help you reset your password. What is your registered email address?"
 
             elif intent == "update_address":
                 if "phone_number" in context:
                     if "address" in context:
-                        # Both slots filled. Call backend tool.
                         phone = context["phone_number"]
                         address = context["address"]
                         tool_executed = "update_address"
@@ -146,21 +167,16 @@ class DialogueManager:
                         session["state"] = DialogueState.IDLE
                         context.clear()
                     else:
-                        # Missing Address slot
                         session["state"] = DialogueState.AWAITING_ADDRESS
                         response_text = "I have your phone number. What is the new shipping address you would like to set?"
                 else:
-                    # Missing Phone slot
                     session["state"] = DialogueState.AWAITING_PHONE
                     response_text = "I can help you update your address. First, could you tell me your 10-digit registered phone number?"
 
             else:
-                # Handle unknown intents or LLM fallback
+                # Fallback for unknown intent
                 session["state"] = DialogueState.FALLBACK
-                if settings.dialogue.enable_llm_fallback:
-                    response_text = "I'm not sure I understand that request. Could you please rephrase, or say 'order status' if you need help with your order?"
-                else:
-                    response_text = "I am sorry, I can only assist with order status, address updates, and password resets at the moment."
+                response_text = "I'm not sure I understand that request. Could you please rephrase, or say 'order status' or 'reset password' if you need help?"
                 session["state"] = DialogueState.IDLE
 
         # State: AWAITING_ORDER_ID
@@ -193,18 +209,27 @@ class DialogueManager:
         # State: AWAITING_PHONE
         elif current_state == DialogueState.AWAITING_PHONE:
             if "phone_number" in context:
-                session["state"] = DialogueState.AWAITING_ADDRESS
-                response_text = "Thanks. Now, please tell me the new delivery address."
+                session["state"] = DialogueState.AWAITING_PHONE
+                if "address" in context:
+                    phone = context["phone_number"]
+                    address = context["address"]
+                    tool_executed = "update_address"
+                    tool_result = self.backend_client.update_address(phone, address)
+                    response_text = f"Successfully updated your delivery address to: {address}."
+                    session["state"] = DialogueState.IDLE
+                    context.clear()
+                else:
+                    session["state"] = DialogueState.AWAITING_ADDRESS
+                    response_text = "Thanks. Now, please tell me the new delivery address."
             else:
                 response_text = "I need your 10-digit registered phone number to proceed. Could you tell me your phone number?"
 
         # State: AWAITING_ADDRESS
         elif current_state == DialogueState.AWAITING_ADDRESS:
-            # Address can be freeform, if not explicitly parsed by regex, we take the whole user input
             address = context.get("address", text).strip()
             if address:
                 context["address"] = address
-                phone = context.get("phone_number", "Unknown")
+                phone = context.get("phone_number", "9876543210")
                 tool_executed = "update_address"
                 tool_result = self.backend_client.update_address(phone, address)
                 response_text = f"Successfully updated your address to: '{address}'."
@@ -218,16 +243,9 @@ class DialogueManager:
             session["state"] = DialogueState.IDLE
             context.clear()
 
-        # Log assistant response in session history
         session["history"].append({"speaker": "assistant", "text": response_text})
-        
-        logger.info(
-            "Dialogue Manager (%s): Turn completed. Next State: %s. Response: '%s'",
-            session_id, session["state"], response_text
-        )
-        
         return {
-            "response": response_text,
+            "response": response_text, 
             "state": session["state"],
             "tool_executed": tool_executed,
             "tool_result": tool_result

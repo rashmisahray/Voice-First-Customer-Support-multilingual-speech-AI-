@@ -13,16 +13,30 @@ class MockIntentClassifier(BaseIntentClassifier):
     """
     Modular keyword and rule-based Intent Classifier for Vani.
     Analyzes user transcript and returns classified intent and confidence score.
+    Supports English, Hindi, and Hinglish phonetic speech variations.
     """
 
     def __init__(self):
-        # Define trigger keyword lists for each target intent
+        # Define trigger keyword lists for each target intent with Hinglish phonetic support
         self.rules = {
-            "greeting": ["hello", "hi", "namaste", "hey", "good morning", "good evening", "greetings"],
-            "farewell": ["bye", "goodbye", "exit", "quit", "thank you", "thanks", "see you", "alvida"],
-            "order_status": ["order status", "track order", "where is my order", "order id", "check order", "my package", "delivery status"],
-            "password_reset": ["reset password", "change password", "forgot password", "password reset", "reset my pass", "account access"],
-            "update_address": ["update address", "change address", "new address", "shipping address", "delivery address", "update my address"]
+            "greeting": [
+                "hello", "hi", "namaste", "hey", "good morning", "good evening", "greetings", "kaise", "kya haal"
+            ],
+            "farewell": [
+                "bye", "goodbye", "exit", "quit", "thank you", "thanks", "see you", "alvida", "dhanyawad", "shukriya"
+            ],
+            "order_status": [
+                "order status", "track order", "where is my order", "order id", "check order", "my package", 
+                "delivery status", "order", "status", "track", "package", "delivery", "kahan hai", "kab aayega"
+            ],
+            "password_reset": [
+                "reset password", "change password", "forgot password", "password reset", "reset my pass", 
+                "account access", "password", "reset", "passwal", "panswai", "karthu", "pass", "login", "badal"
+            ],
+            "update_address": [
+                "update address", "change address", "new address", "shipping address", "delivery address", 
+                "update my address", "address", "location", "pata", "ptta", "badalna", "update", "makan"
+            ]
         }
 
     def classify(self, text: str) -> Dict[str, Any]:
@@ -36,12 +50,12 @@ class MockIntentClassifier(BaseIntentClassifier):
             matches = 0
             for keyword in keywords:
                 if keyword in text_lower:
-                    # Grant higher weight for exact phrase matches
+                    # Grant higher weight for multi-word phrase matches
                     matches += 1.5 if len(keyword.split()) > 1 else 1.0
             
             if matches > 0:
-                # Calculate simple normalized score
-                scores[intent] = min(0.99, 0.7 + (0.1 * matches))
+                # Calculate normalized confidence score
+                scores[intent] = min(0.99, 0.70 + (0.1 * matches))
         
         # Find the highest scoring intent
         if scores:
