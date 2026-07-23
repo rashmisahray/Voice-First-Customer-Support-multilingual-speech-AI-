@@ -13,6 +13,7 @@ class DialogueState(str, Enum):
     AWAITING_EMAIL = "awaiting_email"
     AWAITING_PHONE = "awaiting_phone"
     AWAITING_ADDRESS = "awaiting_address"
+    AWAITING_REASON = "awaiting_reason"
     FALLBACK = "fallback"
 
 class DialogueManager:
@@ -46,6 +47,13 @@ class DialogueManager:
             self.sessions[session_id]["history"].clear()
             logger.info("Dialogue Manager: Session %s reset to IDLE.", session_id)
 
+    def _reset_workflow_context(self, session: Dict[str, Any]):
+        """Resets task-specific variables but keeps persistent user memory (name, email, phone)."""
+        context = session["context"]
+        for key in ["order_id", "reason", "address", "workflow"]:
+            if key in context:
+                del context[key]
+
     def process_turn(
         self, 
         intent: str, 
@@ -53,18 +61,6 @@ class DialogueManager:
         text: str, 
         session_id: str = "default"
     ) -> Dict[str, Any]:
-        """
-        Processes a single conversational turn.
-        
-        Args:
-            intent: Classified intent name.
-            entities: Dictionary of extracted entities.
-            text: Raw transcript text.
-            session_id: Unique session identifier.
-            
-        Returns:
-            Dict containing response text, next state, and details of executed tools.
-        """
         session = self._get_or_create_session(session_id)
         current_state = session["state"]
         context = session["context"]
@@ -83,82 +79,121 @@ class DialogueManager:
 
         # 1. Update session context with newly extracted entities
         for k, v in entities.items():
-            context[k] = v
+            if v is not None:
+                context[k] = v
 
         # 2. Global Interruption Check (Greetings or Goodbyes)
         if intent == "greeting":
             session["state"] = DialogueState.IDLE
-            context.clear()
+            self._reset_workflow_context(session)
             response_text = "Hello! Welcome to Vani Customer Support. How can I help you today? You can check order status, reset password, or update address."
             session["history"].append({"speaker": "assistant", "text": response_text})
             return {"response": response_text, "state": session["state"], "tool_executed": None, "tool_result": None}
             
         elif intent == "farewell":
             session["state"] = DialogueState.IDLE
-            context.clear()
+            self._reset_workflow_context(session)
             response_text = "Thank you for choosing Vani Customer Support. Have a wonderful day ahead! Namaste."
             session["history"].append({"speaker": "assistant", "text": response_text})
             return {"response": response_text, "state": session["state"], "tool_executed": None, "tool_result": None}
 
-        # 3. Intent Switching Logic: If user is in an awaiting state but provides a NEW intent or entity
+        # 3. Intent Switching Logic: If user is in an awaiting state but provides a NEW intent or entities matching one
         if current_state != DialogueState.IDLE:
             # Check if entities for a DIFFERENT intent were supplied
             if "email" in entities and current_state != DialogueState.AWAITING_EMAIL:
                 intent = "password_reset"
             elif "order_id" in entities and current_state != DialogueState.AWAITING_ORDER_ID:
-                intent = "order_status"
+                expected_workflow = context.get("workflow")
+                if expected_workflow not in ["cancel_order", "refund_request", "order_status"]:
+                    intent = "order_status"
             elif ("phone_number" in entities or "address" in entities) and current_state not in [DialogueState.AWAITING_PHONE, DialogueState.AWAITING_ADDRESS]:
                 intent = "update_address"
 
-            # Determine expected intent for current state
+            # Determine expected intent/workflow for current state
             expected_intent = None
             if current_state == DialogueState.AWAITING_ORDER_ID:
-                expected_intent = "order_status"
+                expected_intent = context.get("workflow") or "order_status"
             elif current_state == DialogueState.AWAITING_EMAIL:
                 expected_intent = "password_reset"
             elif current_state in [DialogueState.AWAITING_PHONE, DialogueState.AWAITING_ADDRESS]:
                 expected_intent = "update_address"
+            elif current_state == DialogueState.AWAITING_REASON:
+                expected_intent = "refund_request"
 
-            # If the user switched intent, clear current awaiting state
-            if intent != "unknown" and intent != expected_intent:
+            # If user explicitly switched intent, reset context for the new workflow
+            if intent != "unknown" and expected_intent and intent != expected_intent:
                 logger.info("Dialogue Manager: Switching intent from %s to %s", current_state, intent)
                 session["state"] = DialogueState.IDLE
                 current_state = DialogueState.IDLE
-                context.clear()
+                self._reset_workflow_context(session)
+                # Re-apply current entities
                 for k, v in entities.items():
-                    context[k] = v
+                    if v is not None:
+                        context[k] = v
 
         # 4. State Machine Transition Logic
         if current_state == DialogueState.IDLE:
             if intent == "order_status":
+                context["workflow"] = "order_status"
                 if "order_id" in context:
                     order_id = context["order_id"]
                     tool_executed = "get_order_status"
                     tool_result = self.backend_client.get_order_status(order_id)
-                    
                     if tool_result.get("success"):
                         response_text = f"I found your order {order_id}. The status is '{tool_result['status']}', shipped via {tool_result['carrier']}. It is expected on {tool_result['delivery_date']}."
                     else:
                         response_text = f"I'm sorry, I couldn't find an order with ID {order_id} in our records."
                     session["state"] = DialogueState.IDLE
-                    context.clear()
+                    self._reset_workflow_context(session)
                 else:
                     session["state"] = DialogueState.AWAITING_ORDER_ID
                     response_text = "I'd be happy to check your order status. Could you please state your 6-digit Order ID?"
 
+            elif intent == "cancel_order":
+                context["workflow"] = "cancel_order"
+                if "order_id" in context:
+                    order_id = context["order_id"]
+                    tool_executed = "cancel_order"
+                    tool_result = self.backend_client.cancel_order(order_id)
+                    response_text = f"I have successfully cancelled your order {order_id}."
+                    session["state"] = DialogueState.IDLE
+                    self._reset_workflow_context(session)
+                else:
+                    session["state"] = DialogueState.AWAITING_ORDER_ID
+                    response_text = "I can help you cancel your order. What is your 6-digit Order ID?"
+
+            elif intent == "refund_request":
+                context["workflow"] = "refund_request"
+                if "order_id" not in context:
+                    session["state"] = DialogueState.AWAITING_ORDER_ID
+                    response_text = "Sure, I can help you with a refund. What is your 6-digit Order ID?"
+                elif "reason" not in context:
+                    session["state"] = DialogueState.AWAITING_REASON
+                    response_text = "Could you please tell me the reason for the refund?"
+                else:
+                    order_id = context["order_id"]
+                    reason = context["reason"]
+                    tool_executed = "refund_order"
+                    tool_result = self.backend_client.refund_order(order_id, reason)
+                    response_text = f"I have successfully processed a refund request for your order {order_id} because the item was {reason}."
+                    session["state"] = DialogueState.IDLE
+                    self._reset_workflow_context(session)
+
             elif intent == "password_reset":
+                context["workflow"] = "password_reset"
                 if "email" in context:
                     email = context["email"]
                     tool_executed = "reset_password"
                     tool_result = self.backend_client.reset_password(email)
                     response_text = f"Done! A password reset token has been generated and sent to {email}. Please check your inbox."
                     session["state"] = DialogueState.IDLE
-                    context.clear()
+                    self._reset_workflow_context(session)
                 else:
                     session["state"] = DialogueState.AWAITING_EMAIL
                     response_text = "Sure, I can help you reset your password. What is your registered email address?"
 
             elif intent == "update_address":
+                context["workflow"] = "update_address"
                 if "phone_number" in context:
                     if "address" in context:
                         phone = context["phone_number"]
@@ -167,7 +202,7 @@ class DialogueManager:
                         tool_result = self.backend_client.update_address(phone, address)
                         response_text = f"Thank you. I have successfully updated the delivery address for {phone} to: {address}."
                         session["state"] = DialogueState.IDLE
-                        context.clear()
+                        self._reset_workflow_context(session)
                     else:
                         session["state"] = DialogueState.AWAITING_ADDRESS
                         response_text = "I have your phone number. What is the new shipping address you would like to set?"
@@ -175,6 +210,7 @@ class DialogueManager:
                     session["state"] = DialogueState.AWAITING_PHONE
                     response_text = "I can help you update your address. First, could you tell me your 10-digit registered phone number?"
 
+            else:
                 # Fallback for unknown intent
                 session["state"] = DialogueState.FALLBACK
                 if settings.dialogue.enable_llm_fallback:
@@ -187,16 +223,55 @@ class DialogueManager:
         elif current_state == DialogueState.AWAITING_ORDER_ID:
             if "order_id" in context:
                 order_id = context["order_id"]
-                tool_executed = "get_order_status"
-                tool_result = self.backend_client.get_order_status(order_id)
-                if tool_result.get("success"):
-                    response_text = f"Got it. Order {order_id} is '{tool_result['status']}', handled by {tool_result['carrier']}. Delivery is scheduled for {tool_result['delivery_date']}."
+                workflow = context.get("workflow", "order_status")
+                
+                if workflow == "cancel_order":
+                    tool_executed = "cancel_order"
+                    tool_result = self.backend_client.cancel_order(order_id)
+                    response_text = f"I have successfully cancelled your order {order_id}."
+                    session["state"] = DialogueState.IDLE
+                    self._reset_workflow_context(session)
+                elif workflow == "refund_request":
+                    if "reason" in context:
+                        reason = context["reason"]
+                        tool_executed = "refund_order"
+                        tool_result = self.backend_client.refund_order(order_id, reason)
+                        response_text = f"I have successfully processed a refund request for your order {order_id} because the item was {reason}."
+                        session["state"] = DialogueState.IDLE
+                        self._reset_workflow_context(session)
+                    else:
+                        session["state"] = DialogueState.AWAITING_REASON
+                        response_text = "Could you please tell me the reason for the refund?"
                 else:
-                    response_text = f"I'm sorry, Order ID {order_id} was not found in our records."
-                session["state"] = DialogueState.IDLE
-                context.clear()
+                    tool_executed = "get_order_status"
+                    tool_result = self.backend_client.get_order_status(order_id)
+                    if tool_result.get("success"):
+                        response_text = f"Got it. Order {order_id} is '{tool_result['status']}', handled by {tool_result['carrier']}. Delivery is scheduled for {tool_result['delivery_date']}."
+                    else:
+                        response_text = f"I'm sorry, Order ID {order_id} was not found in our records."
+                    session["state"] = DialogueState.IDLE
+                    self._reset_workflow_context(session)
             else:
                 response_text = "I didn't hear a valid 6-digit Order ID. Could you please state your Order ID?"
+
+        # State: AWAITING_REASON
+        elif current_state == DialogueState.AWAITING_REASON:
+            reason = context.get("reason", text).strip()
+            if reason:
+                context["reason"] = reason
+                order_id = context.get("order_id")
+                
+                if order_id:
+                    tool_executed = "refund_order"
+                    tool_result = self.backend_client.refund_order(order_id, reason)
+                    response_text = f"I have successfully processed a refund request for your order {order_id} because the item was {reason}."
+                    session["state"] = DialogueState.IDLE
+                    self._reset_workflow_context(session)
+                else:
+                    session["state"] = DialogueState.AWAITING_ORDER_ID
+                    response_text = "I have the reason. Now, what is the 6-digit Order ID?"
+            else:
+                response_text = "Could you please tell me the reason for the refund?"
 
         # State: AWAITING_EMAIL
         elif current_state == DialogueState.AWAITING_EMAIL:
@@ -206,14 +281,13 @@ class DialogueManager:
                 tool_result = self.backend_client.reset_password(email)
                 response_text = f"A password reset link has been dispatched to {email}. Please verify your inbox."
                 session["state"] = DialogueState.IDLE
-                context.clear()
+                self._reset_workflow_context(session)
             else:
                 response_text = "I couldn't catch a valid email address. What is your registered email?"
 
         # State: AWAITING_PHONE
         elif current_state == DialogueState.AWAITING_PHONE:
             if "phone_number" in context:
-                session["state"] = DialogueState.AWAITING_PHONE
                 if "address" in context:
                     phone = context["phone_number"]
                     address = context["address"]
@@ -221,7 +295,7 @@ class DialogueManager:
                     tool_result = self.backend_client.update_address(phone, address)
                     response_text = f"Successfully updated your delivery address to: {address}."
                     session["state"] = DialogueState.IDLE
-                    context.clear()
+                    self._reset_workflow_context(session)
                 else:
                     session["state"] = DialogueState.AWAITING_ADDRESS
                     response_text = "Thanks. Now, please tell me the new delivery address."
@@ -238,14 +312,14 @@ class DialogueManager:
                 tool_result = self.backend_client.update_address(phone, address)
                 response_text = f"Successfully updated your address to: '{address}'."
                 session["state"] = DialogueState.IDLE
-                context.clear()
+                self._reset_workflow_context(session)
             else:
                 response_text = "Please tell me the new delivery address."
 
         else:
             response_text = "How else can I help you today?"
             session["state"] = DialogueState.IDLE
-            context.clear()
+            self._reset_workflow_context(session)
 
         session["history"].append({"speaker": "assistant", "text": response_text})
         return {

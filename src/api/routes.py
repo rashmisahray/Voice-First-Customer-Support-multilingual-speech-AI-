@@ -10,7 +10,7 @@ from src.core.observability import observe, get_trace_url
 from src.asr.whisper_asr import WhisperASR
 from src.asr.normalizer import TranscriptNormalizer
 from src.nlu.classifier import MockIntentClassifier
-from src.nlu.extractor import MockEntityExtractor
+from src.nlu.extractor import LLMEntityExtractor
 from src.dialogue.manager import DialogueManager
 from src.tts.base import MockTTS
 
@@ -21,7 +21,7 @@ router = APIRouter()
 asr_service = WhisperASR(model_size=settings.asr.model_name)
 transcript_normalizer = TranscriptNormalizer()
 nlu_classifier = MockIntentClassifier()
-nlu_extractor = MockEntityExtractor()
+nlu_extractor = LLMEntityExtractor()
 dialogue_manager = DialogueManager()
 tts_service = MockTTS()
 

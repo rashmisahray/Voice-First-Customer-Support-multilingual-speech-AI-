@@ -82,3 +82,34 @@ class BackendClient:
             "success": True,
             "message": "Customer address updated successfully in the profile."
         }
+
+    def cancel_order(self, order_id: str) -> Dict[str, Any]:
+        """Cancels a specific order in backend systems.
+        
+        Args:
+            order_id: Order identification string.
+            
+        Returns:
+            Dict detailing cancellation status.
+        """
+        logger.info("Backend Tools: Cancelling Order ID: %s", order_id)
+        return {
+            "success": True,
+            "message": f"Order {order_id} has been cancelled successfully."
+        }
+
+    def refund_order(self, order_id: str, reason: str) -> Dict[str, Any]:
+        """Processes a refund request for a specific order in backend systems.
+        
+        Args:
+            order_id: Order identification string.
+            reason: Reason for refund.
+            
+        Returns:
+            Dict detailing refund status.
+        """
+        logger.info("Backend Tools: Processing refund for Order ID: %s, Reason: %s", order_id, reason)
+        return {
+            "success": True,
+            "message": f"Refund of order {order_id} processed successfully due to: {reason}."
+        }
