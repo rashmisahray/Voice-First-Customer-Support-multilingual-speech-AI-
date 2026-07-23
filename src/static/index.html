@@ -510,6 +510,32 @@
                 </div>
             </div>
 
+            <!-- Monitoring Dashboard Card -->
+            <div class="glass-card">
+                <div class="card-title">
+                    <span>System Metrics Dashboard</span>
+                    <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="fetchMetrics()">Refresh</button>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; text-align: left;">
+                    <div>
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Total Turns</label>
+                        <div id="metrics-turns" style="font-size: 1.4rem; font-weight: 700; color: var(--primary-color); margin-top: 4px;">0</div>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Success Rate</label>
+                        <div id="metrics-success" style="font-size: 1.4rem; font-weight: 700; color: var(--success-color); margin-top: 4px;">100%</div>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Avg ASR Latency</label>
+                        <div id="metrics-asr" style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-top: 4px;">0ms</div>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Avg Dialogue Latency</label>
+                        <div id="metrics-dialogue" style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-top: 4px;">0ms</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="glass-card" style="text-align: center;">
                 <div class="card-title" style="justify-content: center;">
                     <span>Voice Input Gateway</span>
@@ -849,7 +875,33 @@
                 document.getElementById("trace-container").style.display = "flex";
                 document.getElementById("trace-link").href = data.trace_url;
             }
+            
+            // Refresh metrics dashboard immediately
+            fetchMetrics();
         }
+
+        async function fetchMetrics() {
+            try {
+                const apiEndpoint = (window.location.protocol.startsWith('http') && window.location.port === '8000') 
+                    ? '/api/v1/monitoring/metrics' 
+                    : 'http://127.0.0.1:8000/api/v1/monitoring/metrics';
+                    
+                const res = await fetch(apiEndpoint);
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById("metrics-turns").innerText = data.total_turns;
+                    document.getElementById("metrics-success").innerText = data.task_success_rate_percent + "%";
+                    document.getElementById("metrics-asr").innerText = data.avg_asr_latency_ms + "ms";
+                    document.getElementById("metrics-dialogue").innerText = data.avg_dialogue_latency_ms + "ms";
+                }
+            } catch (err) {
+                console.error("Failed to load metrics:", err);
+            }
+        }
+        
+        // Auto-refresh metrics every 5 seconds
+        setInterval(fetchMetrics, 5000);
+        window.addEventListener("DOMContentLoaded", fetchMetrics);
     </script>
 </body>
 </html>

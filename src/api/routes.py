@@ -1,8 +1,9 @@
 import base64
 import time
 import logging
+import os
 from typing import Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Response
 from pydantic import BaseModel, Field
 
 from src.core.config import settings
@@ -13,6 +14,7 @@ from src.nlu.classifier import MockIntentClassifier
 from src.nlu.extractor import LLMEntityExtractor
 from src.dialogue.manager import DialogueManager, DialogueState
 from src.tts.base import MockTTS
+from src.core.metrics import metrics_tracker
 
 logger = logging.getLogger("src.api.routes")
 router = APIRouter()
@@ -25,24 +27,17 @@ nlu_extractor = LLMEntityExtractor()
 dialogue_manager = DialogueManager()
 tts_service = MockTTS()
 
+# Start time marker for uptime calculation
 START_TIME = time.time()
 
-# Request/Response Schemas
-class HealthResponse(BaseModel):
-    status: str
-    app_name: str
-    version: str
-    environment: str
-    uptime_seconds: float
-
 class VoiceProcessRequest(BaseModel):
-    audio_base64: str = Field(..., description="Base64 encoded WAV audio data")
-    session_id: str = Field("default", description="Session identifier for multi-turn conversations")
+    audio_base64: str = Field(..., description="Base64 encoded WAV audio bytes")
+    session_id: str = Field("default", description="Session identifier for state tracking")
 
 class VoiceProcessResponse(BaseModel):
     transcript: str
-    language: Optional[str] = "en"
-    language_probability: Optional[float] = 1.0
+    language: str
+    language_probability: float
     intent: str
     intent_confidence: float
     entities: Dict[str, Any]
@@ -53,9 +48,16 @@ class VoiceProcessResponse(BaseModel):
     backend_tool_result: Optional[Dict[str, Any]] = None
     trace_url: Optional[str] = None
 
+class HealthResponse(BaseModel):
+    status: str
+    app_name: str
+    version: str
+    environment: str
+    uptime_seconds: float
+
 @router.get("/health", response_model=HealthResponse)
-def get_health():
-    """Health status checkpoint."""
+def health_check():
+    """Returns application status and diagnostic info."""
     uptime = time.time() - START_TIME
     return HealthResponse(
         status="healthy",
@@ -98,10 +100,66 @@ async def process_voice_upload(
     audio_bytes = await file.read()
     return execute_pipeline(audio_bytes, session_id)
 
+@router.post("/api/v1/telephony/twilio")
+def twilio_telephony_webhook(
+    SpeechResult: Optional[str] = Form(None),
+    CallSid: str = Form("default")
+):
+    """
+    Twilio Telephony Gather Webhook.
+    Handles phone caller speech inputs and responds with Gather TwiML XML turns.
+    """
+    logger.info("Telephony API: Processing call turn. Sid: %s, Input: '%s'", CallSid, SpeechResult)
+    
+    asr_start = time.time()
+    
+    if not SpeechResult:
+        # Initial greeting when caller dials in
+        response_text = "Hello! Welcome to Vani Customer Support. How can I help you today?"
+        next_state = "idle"
+        tool_executed = None
+        tool_result = None
+        asr_latency_ms = 0.0
+        dialogue_latency_ms = 1.0
+    else:
+        asr_latency_ms = (time.time() - asr_start) * 1000.0
+        
+        dialogue_start = time.time()
+        # Direct text turn bypasses ASR step
+        dialogue_res = dialogue_manager.process_turn("unknown", {}, SpeechResult, CallSid)
+        response_text = dialogue_res["response"]
+        next_state = dialogue_res["state"]
+        tool_executed = dialogue_res["tool_executed"]
+        tool_result = dialogue_res["tool_result"]
+        dialogue_latency_ms = (time.time() - dialogue_start) * 1000.0
+        
+        tool_success = None
+        if tool_executed:
+            if isinstance(tool_result, dict):
+                tool_success = tool_result.get("success", False)
+            else:
+                tool_success = False
+        metrics_tracker.record_turn(asr_ms=asr_latency_ms, dialogue_ms=dialogue_latency_ms, tool_success=tool_success)
+        
+    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say language="en-IN">{response_text}</Say>
+    <Gather input="speech" action="/api/v1/telephony/twilio" method="POST" speechTimeout="auto">
+        <Say language="en-IN">Please state your next request.</Say>
+    </Gather>
+</Response>"""
+    return Response(content=twiml, media_type="application/xml")
+
+@router.get("/api/v1/monitoring/metrics")
+def get_system_metrics():
+    """Exposes system performance metrics and latencies."""
+    return metrics_tracker.get_report()
+
 def execute_pipeline(audio_bytes: bytes, session_id: str) -> VoiceProcessResponse:
-    """Helper executing all pipeline steps sequentially."""
+    """Helper executing all pipeline steps sequentially with metrics logging."""
     
     # 1. ASR - Automatic Speech Recognition with language detection
+    asr_start = time.time()
     try:
         asr_res = asr_service.transcribe_with_meta(audio_bytes)
         raw_transcript = asr_res["text"]
@@ -110,6 +168,7 @@ def execute_pipeline(audio_bytes: bytes, session_id: str) -> VoiceProcessRespons
     except Exception as e:
         logger.error("Voice Pipeline Error during ASR: %s", e)
         raise HTTPException(status_code=422, detail=f"ASR Transcription failed: {e}")
+    asr_latency_ms = (time.time() - asr_start) * 1000.0
         
     # Apply Transcript Normalization Layer
     transcript = transcript_normalizer.normalize(raw_transcript)
@@ -121,6 +180,11 @@ def execute_pipeline(audio_bytes: bytes, session_id: str) -> VoiceProcessRespons
         transcript = "[Silence]"
         
     api_key = os.environ.get("GEMINI_API_KEY")
+    dialogue_start = time.time()
+    
+    intent = "unknown"
+    confidence = 1.0
+    entities = {}
     
     if api_key:
         logger.info("Optimized Pipeline: Routing directly to Gemini DialogueManager, bypassing local ASR/NLU classifier/extractor steps.")
@@ -164,6 +228,17 @@ def execute_pipeline(audio_bytes: bytes, session_id: str) -> VoiceProcessRespons
         next_state = dialogue_res["state"]
         tool_executed = dialogue_res["tool_executed"]
         tool_result = dialogue_res["tool_result"]
+
+    dialogue_latency_ms = (time.time() - dialogue_start) * 1000.0
+    
+    # Record metrics
+    tool_success = None
+    if tool_executed:
+        if isinstance(tool_result, dict):
+            tool_success = tool_result.get("success", False)
+        else:
+            tool_success = False
+    metrics_tracker.record_turn(asr_ms=asr_latency_ms, dialogue_ms=dialogue_latency_ms, tool_success=tool_success)
     
     # 5. TTS Response Synthesis (convert text to audio)
     try:

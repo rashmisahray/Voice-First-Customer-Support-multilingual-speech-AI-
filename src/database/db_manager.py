@@ -81,3 +81,13 @@ def init_db():
     """Wrapper to initialize and seed database (compatible with startup hook)."""
     conn = get_db_connection()
     conn.close()
+
+def reset_db():
+    """Drops and re-creates database tables with fresh seed data (useful for test isolation)."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DROP TABLE IF EXISTS orders")
+    cursor.execute("DROP TABLE IF EXISTS customers")
+    conn.commit()
+    _init_db_with_conn(conn)
+    conn.close()

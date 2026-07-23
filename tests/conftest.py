@@ -20,3 +20,8 @@ def mock_gemini_key_for_offline_tests(request):
             if "GEMINI_API_KEY" in os.environ:
                 del os.environ["GEMINI_API_KEY"]
             yield
+@pytest.fixture(autouse=True)
+def clean_db():
+    """Resets the SQLite database to seed state before every test."""
+    from src.database.db_manager import reset_db
+    reset_db()
