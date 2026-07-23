@@ -43,7 +43,7 @@
         }
 
         header {
-            padding: 2rem 4rem;
+            padding: 1.5rem 4rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -95,14 +95,13 @@
             max-width: 1200px;
             width: 100%;
             margin: 0 auto;
-            padding: 3rem 2rem;
+            padding: 2.5rem 2rem;
             display: grid;
             grid-template-columns: 1fr 1.5fr;
-            gap: 2.5rem;
+            gap: 2rem;
             align-items: start;
         }
 
-        /* Glassmorphic card styling */
         .glass-card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -115,30 +114,22 @@
 
         .glass-card:hover {
             border-color: rgba(99, 102, 241, 0.2);
-            box-shadow: 0 15px 35px rgba(99, 102, 241, 0.05);
         }
 
         .card-title {
-            font-size: 1.25rem;
+            font-size: 1.2rem;
             font-weight: 600;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
             color: var(--text-main);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        /* Left Control Panel */
         .control-panel {
             display: flex;
             flex-direction: column;
-            gap: 2rem;
-        }
-
-        .session-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
+            gap: 1.5rem;
         }
 
         .form-group {
@@ -148,11 +139,11 @@
         }
 
         label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         input[type="text"] {
@@ -162,36 +153,23 @@
             padding: 0.75rem 1rem;
             color: var(--text-main);
             font-family: var(--font-family);
-            font-size: 1rem;
+            font-size: 0.95rem;
             transition: all 0.3s ease;
         }
 
         input[type="text"]:focus {
             outline: none;
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
         }
 
         .btn {
             font-family: var(--font-family);
             font-weight: 600;
-            padding: 0.75rem 1.5rem;
-            border-radius: 10px;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s ease;
             text-align: center;
-        }
-
-        .btn-primary {
-            background: var(--primary-glow);
-            color: white;
-            border: none;
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
         }
 
         .btn-secondary {
@@ -204,18 +182,18 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
-        /* Microphone Recorder */
+        /* Voice Gate */
         .recorder-section {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 1.5rem;
-            padding: 1.5rem 0;
+            gap: 1.25rem;
+            padding: 1rem 0;
         }
 
         .record-trigger {
-            width: 110px;
-            height: 110px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
             background: rgba(99, 102, 241, 0.1);
             border: 2px solid var(--primary-color);
@@ -249,8 +227,8 @@
         }
 
         .mic-icon {
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             fill: var(--primary-color);
             transition: fill 0.3s ease;
         }
@@ -262,7 +240,7 @@
 
         .wave-container {
             display: none;
-            height: 24px;
+            height: 20px;
             align-items: center;
             gap: 4px;
         }
@@ -285,151 +263,119 @@
         .wave-bar:nth-child(5) { animation-delay: 0.6s; }
 
         .recorder-status {
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             color: var(--text-muted);
         }
 
         .upload-section {
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 0.75rem;
             border-top: 1px dashed var(--border-color);
-            padding-top: 1.5rem;
+            padding-top: 1.25rem;
             width: 100%;
         }
 
-        /* Right Pipeline Visualizer */
-        .pipeline-panel {
+        /* Conversation Hub */
+        .chat-hub {
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 1rem;
         }
 
-        .pipeline-card {
+        .status-tracker {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1.25rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        .status-tracker-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success-color);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--success-color);
+        }
+
+        .status-tracker-dot.processing {
+            background-color: var(--primary-color);
+            box-shadow: 0 0 8px var(--primary-color);
+            animation: pulse 1s infinite alternate;
+        }
+
+        .status-tracker-dot.listening {
+            background-color: var(--accent-color);
+            box-shadow: 0 0 8px var(--accent-color);
+            animation: pulse 1s infinite alternate;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            height: 400px;
+            overflow-y: auto;
+            padding: 1.25rem;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .chat-bubble {
+            max-width: 80%;
+            padding: 0.8rem 1.1rem;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            animation: bubbleFade 0.25s ease-out forwards;
+        }
+
+        .chat-bubble.user {
+            background: var(--primary-glow);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        .chat-bubble.assistant {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .chat-info {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            align-self: center;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            margin: 0.25rem 0;
+            border: 1px solid var(--border-color);
+        }
+
+        .audio-playback-card {
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 1.25rem;
-            display: flex;
-            gap: 1.25rem;
-            align-items: flex-start;
-            position: relative;
-            transition: border-color 0.2s ease;
+            padding: 1rem;
+            display: none;
+            flex-direction: column;
+            gap: 0.5rem;
         }
 
-        .pipeline-card.active {
-            border-color: rgba(99, 102, 241, 0.4);
-            background: rgba(99, 102, 241, 0.02);
-        }
-
-        .pipeline-card.success {
-            border-color: rgba(16, 185, 129, 0.3);
-            background: rgba(16, 185, 129, 0.01);
-        }
-
-        .step-number {
-            background: rgba(255, 255, 255, 0.06);
-            color: var(--text-muted);
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 0.85rem;
-            font-weight: 600;
-            flex-shrink: 0;
-            border: 1px solid var(--border-color);
-        }
-
-        .pipeline-card.active .step-number {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
-
-        .pipeline-card.success .step-number {
-            background: var(--success-color);
-            color: white;
-            border-color: var(--success-color);
-        }
-
-        .step-content {
-            flex-grow: 1;
-        }
-
-        .step-title {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: var(--text-main);
-            margin-bottom: 0.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .step-badge {
-            font-size: 0.75rem;
-            padding: 0.2rem 0.6rem;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.06);
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .pipeline-card.success .step-badge {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--success-color);
-        }
-
-        .step-result {
-            font-size: 0.95rem;
-            color: var(--text-muted);
-            line-height: 1.4;
-            white-space: pre-wrap;
-        }
-
-        .result-highlight {
-            color: var(--text-main);
-            font-weight: 500;
-        }
-
-        .entity-tag {
-            display: inline-block;
-            background: rgba(99, 102, 241, 0.12);
-            color: #c7d2fe;
-            font-size: 0.8rem;
-            padding: 0.25rem 0.6rem;
-            border-radius: 6px;
-            margin-right: 0.5rem;
-            margin-top: 0.25rem;
-            border: 1px solid rgba(99, 102, 241, 0.2);
-        }
-
-        /* Trace Button */
-        .trace-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-top: 1px solid var(--border-color);
-            padding-top: 1.5rem;
-            margin-top: 1rem;
-        }
-
-        .trace-link {
-            color: var(--primary-color);
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: opacity 0.2s ease;
-        }
-
-        .trace-link:hover {
-            text-decoration: underline;
-            opacity: 0.9;
+        audio {
+            width: 100%;
+            height: 32px;
         }
 
         /* Animations */
@@ -439,44 +385,31 @@
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); }
-            100% { transform: scale(1.05); }
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.08); opacity: 1; }
         }
 
         @keyframes waveBounce {
-            0% { height: 6px; }
-            100% { height: 24px; }
+            0% { height: 5px; }
+            100% { height: 20px; }
+        }
+
+        @keyframes bubbleFade {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         footer {
-            padding: 2rem;
+            padding: 1.5rem;
             text-align: center;
             font-size: 0.85rem;
             color: var(--text-muted);
             border-top: 1px solid var(--border-color);
         }
 
-        .audio-player-container {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-top: 0.5rem;
-            width: 100%;
-        }
-
-        audio {
-            width: 100%;
-            height: 36px;
-            border-radius: 8px;
-        }
-
-        /* Responsive */
         @media (max-width: 900px) {
             main {
                 grid-template-columns: 1fr;
-            }
-            header {
-                padding: 1.5rem 2rem;
             }
         }
     </style>
@@ -486,53 +419,25 @@
     <header>
         <div class="logo-section">
             <h1>Vani</h1>
-            <p>Multilingual Voice AI Customer Support Agent</p>
+            <p>Multilingual Voice AI Customer Support Representative</p>
         </div>
         <div class="status-badge">
             <div class="status-dot"></div>
-            <span>E2E Slice Connected</span>
+            <span>Support Portal Active</span>
         </div>
     </header>
 
     <main>
-        <!-- Left Side controls -->
+        <!-- Left Column: Voice inputs -->
         <div class="control-panel">
             <div class="glass-card">
                 <div class="card-title">
-                    <span>Dialogue Session</span>
-                    <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="resetSession()">Reset</button>
+                    <span>Active Session</span>
+                    <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="resetSession()">Reset Conversation</button>
                 </div>
-                <div class="session-controls">
-                    <div class="form-group">
-                        <label for="session-id">Session ID</label>
-                        <input type="text" id="session-id" value="support_session_demo" placeholder="Enter session identifier">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Monitoring Dashboard Card -->
-            <div class="glass-card">
-                <div class="card-title">
-                    <span>System Metrics Dashboard</span>
-                    <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="fetchMetrics()">Refresh</button>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; text-align: left;">
-                    <div>
-                        <label style="font-size: 0.75rem; color: var(--text-muted);">Total Turns</label>
-                        <div id="metrics-turns" style="font-size: 1.4rem; font-weight: 700; color: var(--primary-color); margin-top: 4px;">0</div>
-                    </div>
-                    <div>
-                        <label style="font-size: 0.75rem; color: var(--text-muted);">Success Rate</label>
-                        <div id="metrics-success" style="font-size: 1.4rem; font-weight: 700; color: var(--success-color); margin-top: 4px;">100%</div>
-                    </div>
-                    <div>
-                        <label style="font-size: 0.75rem; color: var(--text-muted);">Avg ASR Latency</label>
-                        <div id="metrics-asr" style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-top: 4px;">0ms</div>
-                    </div>
-                    <div>
-                        <label style="font-size: 0.75rem; color: var(--text-muted);">Avg Dialogue Latency</label>
-                        <div id="metrics-dialogue" style="font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-top: 4px;">0ms</div>
-                    </div>
+                <div class="form-group">
+                    <label for="session-id">Customer Session ID</label>
+                    <input type="text" id="session-id" value="customer_support_demo" placeholder="Enter session identifier">
                 </div>
             </div>
 
@@ -543,7 +448,6 @@
                 
                 <div class="recorder-section">
                     <button class="record-trigger" id="record-btn" onclick="toggleRecording()">
-                        <!-- SVG Microphone -->
                         <svg class="mic-icon" viewBox="0 0 24 24">
                             <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
                         </svg>
@@ -557,111 +461,54 @@
                         <div class="wave-bar"></div>
                     </div>
 
-                    <div class="recorder-status" id="record-status">Click to start recording</div>
+                    <div class="recorder-status" id="record-status">Click mic button to speak</div>
                 </div>
 
                 <div class="upload-section">
-                    <label style="text-align: left;">Or Upload WAV File</label>
-                    <input type="file" id="audio-file" accept=".wav" style="color: var(--text-muted); font-size: 0.9rem;" onchange="uploadAudioFile()">
+                    <label style="text-align: left;">Or Upload Recorded WAV File</label>
+                    <input type="file" id="audio-file" accept=".wav" style="color: var(--text-muted); font-size: 0.85rem;" onchange="uploadAudioFile()">
+                </div>
+            </div>
+
+            <!-- Simple Guide -->
+            <div class="glass-card" style="padding: 1.5rem;">
+                <div class="card-title" style="font-size: 1rem; margin-bottom: 0.75rem;">Support Capabilities Guide</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; text-align: left; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <div>• <b>Order Tracking</b>: <i>"Check order status"</i></div>
+                    <div>• <b>Order Cancellation</b>: <i>"Cancel order"</i></div>
+                    <div>• <b>Refund Inquiries</b>: <i>"Request refund"</i></div>
+                    <div>• <b>Address Changes</b>: <i>"Change shipping address"</i></div>
+                    <div>• <b>Sign In Assistance</b>: <i>"Forgot password"</i></div>
                 </div>
             </div>
         </div>
 
-        <!-- Right Side visualizer -->
-        <div class="pipeline-panel">
-            <div class="glass-card">
-                <div class="card-title">Pipeline Execution Visualizer</div>
-
-                <div class="pipeline-panel" style="gap: 1rem;">
-                    <!-- ASR -->
-                    <div class="pipeline-card" id="card-asr">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <div class="step-title">
-                                <span>Speech Recognition (ASR)</span>
-                                <span class="step-badge">Whisper</span>
-                            </div>
-                            <div class="step-result" id="res-asr">Waiting for voice input...</div>
-                        </div>
-                    </div>
-
-                    <!-- NLU Intent -->
-                    <div class="pipeline-card" id="card-nlu-intent">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <div class="step-title">
-                                <span>Intent Detection</span>
-                                <span class="step-badge">Classifier</span>
-                            </div>
-                            <div class="step-result" id="res-nlu-intent">Pending transcription...</div>
-                        </div>
-                    </div>
-
-                    <!-- NLU Entities -->
-                    <div class="pipeline-card" id="card-nlu-entities">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <div class="step-title">
-                                <span>Entity Extraction</span>
-                                <span class="step-badge">Regex Parser</span>
-                            </div>
-                            <div class="step-result" id="res-nlu-entities">Pending transcription...</div>
-                        </div>
-                    </div>
-
-                    <!-- Dialogue -->
-                    <div class="pipeline-card" id="card-dialogue">
-                        <div class="step-number">4</div>
-                        <div class="step-content">
-                            <div class="step-title">
-                                <span>Dialogue State Manager</span>
-                                <span class="step-badge">State Machine</span>
-                            </div>
-                            <div class="step-result" id="res-dialogue">Pending state transition...</div>
-                        </div>
-                    </div>
-
-                    <!-- Backend Tool -->
-                    <div class="pipeline-card" id="card-tool">
-                        <div class="step-number">5</div>
-                        <div class="step-content">
-                            <div class="step-title">
-                                <span>Backend Tool Integration</span>
-                                <span class="step-badge">Business APIs</span>
-                            </div>
-                            <div class="step-result" id="res-tool">No tool call triggered yet.</div>
-                        </div>
-                    </div>
-
-                    <!-- TTS -->
-                    <div class="pipeline-card" id="card-tts">
-                        <div class="step-number">6</div>
-                        <div class="step-content">
-                            <div class="step-title">
-                                <span>Text-To-Speech (TTS)</span>
-                                <span class="step-badge">ElevenLabs / gTTS</span>
-                            </div>
-                            <div class="step-result" id="res-tts">Pending output audio generation...</div>
-                            <div class="audio-player-container" id="player-container" style="display: none;">
-                                <audio id="audio-output" controls autoplay></audio>
-                            </div>
-                        </div>
-                    </div>
+        <!-- Right Column: Conversation Hub -->
+        <div class="chat-hub">
+            <div class="glass-card" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                
+                <!-- Status Tracker -->
+                <div class="status-tracker">
+                    <div class="status-tracker-dot" id="tracker-dot"></div>
+                    <span id="tracker-status">Ready to assist you</span>
                 </div>
 
-                <!-- Trace URL -->
-                <div class="trace-section" id="trace-container" style="display: none;">
-                    <span style="font-size: 0.85rem; color: var(--text-muted);">Observability Tracing Active</span>
-                    <a class="trace-link" id="trace-link" href="#" target="_blank">
-                        View Trace in Langfuse ↗
-                    </a>
+                <!-- Chat History Log -->
+                <div class="chat-container" id="chat-history">
+                    <div class="chat-bubble assistant">Hello! I am Vani, your virtual customer support representative. How can I help you today?</div>
+                </div>
+
+                <!-- Playback Card -->
+                <div class="audio-playback-card" id="playback-card">
+                    <label>Voice Playback</label>
+                    <audio id="audio-output" controls autoplay></audio>
                 </div>
             </div>
         </div>
     </main>
 
     <footer>
-        <p>&copy; 2026 Vani Project. Developed for Week 2 End-to-End Vertical Slice Demo.</p>
+        <p>&copy; 2026 Vani Customer Support Representative Portal.</p>
     </footer>
 
     <script>
@@ -673,36 +520,39 @@
         let analyser = null;
         let animId = null;
 
-        function updateCard(cardId, status, contentHtml) {
-            const card = document.getElementById(cardId);
-            card.className = "pipeline-card " + status;
-            const resEl = card.querySelector(".step-result");
-            resEl.innerHTML = contentHtml;
+        function setStatus(statusType, text) {
+            const dot = document.getElementById("tracker-dot");
+            const label = document.getElementById("tracker-status");
+            
+            dot.className = "status-tracker-dot " + statusType;
+            label.innerText = text;
         }
 
-        function resetPipelineUI() {
-            updateCard("card-asr", "active", "Processing audio speech transcription...");
-            updateCard("card-nlu-intent", "", "Pending transcription...");
-            updateCard("card-nlu-entities", "", "Pending transcription...");
-            updateCard("card-dialogue", "", "Pending state transition...");
-            updateCard("card-tool", "", "No tool call triggered yet.");
-            updateCard("card-tts", "", "Pending output audio generation...");
-            document.getElementById("player-container").style.display = "none";
-            document.getElementById("trace-container").style.display = "none";
+        function addChatBubble(text, sender) {
+            const chatHistory = document.getElementById("chat-history");
+            const bubble = document.createElement("div");
+            bubble.className = "chat-bubble " + sender;
+            bubble.innerText = text;
+            chatHistory.appendChild(bubble);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function addInfoBubble(text) {
+            const chatHistory = document.getElementById("chat-history");
+            const info = document.createElement("div");
+            info.className = "chat-info";
+            info.innerText = text;
+            chatHistory.appendChild(info);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
         }
 
         function resetSession() {
             const sessionId = document.getElementById("session-id").value;
-            // Simply refresh Dialogue states
-            updateCard("card-asr", "", "Waiting for voice input...");
-            updateCard("card-nlu-intent", "", "Pending transcription...");
-            updateCard("card-nlu-entities", "", "Pending transcription...");
-            updateCard("card-dialogue", "", "Dialogue context reset.");
-            updateCard("card-tool", "", "No tool call triggered yet.");
-            updateCard("card-tts", "", "Pending output audio generation...");
-            document.getElementById("player-container").style.display = "none";
-            document.getElementById("trace-container").style.display = "none";
-            alert("Session reset requested.");
+            const chatHistory = document.getElementById("chat-history");
+            chatHistory.innerHTML = '<div class="chat-bubble assistant">Hello! I am Vani, your virtual customer support representative. How can I help you today?</div>';
+            document.getElementById("playback-card").style.display = "none";
+            setStatus("", "Ready to assist you");
+            alert("Session history has been reset.");
         }
 
         async function toggleRecording() {
@@ -710,13 +560,11 @@
             const statusText = document.getElementById("record-status");
 
             if (!isRecording) {
-                // Start Recording
                 audioChunks = [];
                 try {
                     activeStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     mediaRecorder = new MediaRecorder(activeStream);
                     
-                    // Setup Web Audio API volume meter
                     try {
                         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                         const source = audioCtx.createMediaStreamSource(activeStream);
@@ -734,9 +582,8 @@
                             for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
                             let avg = sum / dataArray.length;
                             
-                            // Scale bar heights based on live volume
-                            bars.forEach((bar, idx) => {
-                                let h = Math.max(6, Math.min(32, (avg / 3) + Math.random() * 6));
+                            bars.forEach((bar) => {
+                                let h = Math.max(5, Math.min(28, (avg / 3) + Math.random() * 5));
                                 bar.style.height = `${h}px`;
                             });
                             animId = requestAnimationFrame(monitorVolume);
@@ -765,34 +612,32 @@
                         uploadAudioBlob(audioBlob);
                     };
 
-                    // Record chunks every 250ms
                     mediaRecorder.start(250);
                     isRecording = true;
                     btn.classList.add("recording");
-                    statusText.innerText = "🎤 Listening... Click button again when finished speaking!";
+                    statusText.innerText = "Listening...";
+                    setStatus("listening", "Listening to your voice...");
                 } catch (err) {
                     console.error("Mic access error:", err);
-                    statusText.innerText = "❌ Mic access denied. Check browser permissions.";
-                    alert("Microphone Error: Please allow microphone permissions in your browser address bar.");
+                    statusText.innerText = "Mic access denied.";
+                    setStatus("", "Microphone not available");
+                    alert("Microphone Error: Please allow microphone permissions in your browser.");
                 }
             } else {
-                // Stop Recording
                 isRecording = false;
                 btn.classList.remove("recording");
-                statusText.innerText = "Processing voice...";
+                statusText.innerText = "Processing...";
+                setStatus("processing", "Processing your query...");
                 if (mediaRecorder && mediaRecorder.state !== "inactive") {
                     mediaRecorder.stop();
                 }
             }
         }
 
-        // Upload recorded microphone audio
         function uploadAudioBlob(blob) {
-            resetPipelineUI();
-            
             if (!blob || blob.size < 100) {
-                document.getElementById("record-status").innerText = "Recording was too short. Please speak while holding record.";
-                updateCard("card-asr", "error", "Audio payload empty or too short. Please speak clearly into your microphone.");
+                document.getElementById("record-status").innerText = "Recording was too short.";
+                setStatus("", "Ready to assist you");
                 return;
             }
             
@@ -802,7 +647,6 @@
             formData.append("file", blob, `mic_input.${ext}`);
             formData.append("session_id", sessionId);
 
-            // Determine API base URL (fallback to http://127.0.0.1:8000 if opened via file:// or another port)
             const apiEndpoint = (window.location.protocol.startsWith('http') && window.location.port === '8000') 
                 ? '/api/v1/voice/upload' 
                 : 'http://127.0.0.1:8000/api/v1/voice/upload';
@@ -812,96 +656,63 @@
                 body: formData
             })
             .then(res => {
-                if (!res.ok) throw new Error("Server response code: " + res.status);
+                if (!res.ok) throw new Error("Server response: " + res.status);
                 return res.json();
             })
             .then(data => {
-                renderPipelineResults(data);
-                document.getElementById("record-status").innerText = "Voice processed successfully.";
+                // Render conversation turns
+                if (data.transcript && data.transcript !== "[Silence]") {
+                    addChatBubble(data.transcript, "user");
+                }
+                
+                // Expose friendly system actions instead of AI terms
+                if (data.backend_tool_executed) {
+                    if (data.backend_tool_executed === "get_order_status") {
+                        addInfoBubble("Checking order details...");
+                    } else if (data.backend_tool_executed === "update_address") {
+                        addInfoBubble("Updating your shipping profile...");
+                    } else if (data.backend_tool_executed === "cancel_order") {
+                        addInfoBubble("Processing cancellation request...");
+                    } else if (data.backend_tool_executed === "reset_password") {
+                        addInfoBubble("Verifying profile and generating reset details...");
+                    } else if (data.backend_tool_executed === "refund_order") {
+                        addInfoBubble("Processing refund request...");
+                    }
+                } else if (data.dialogue_state && data.dialogue_state !== "idle") {
+                    addInfoBubble("Found missing details, asking for clarification...");
+                } else {
+                    addInfoBubble("I understood your request.");
+                }
+
+                // Add assistant response
+                addChatBubble(data.response_text, "assistant");
+                
+                // Play audio response
+                const audioOut = document.getElementById("audio-output");
+                audioOut.src = `data:audio/wav;base64,${data.audio_response_base64}`;
+                document.getElementById("playback-card").style.display = "flex";
+                
+                setStatus("processing", "Speaking...");
+                audioOut.onended = () => {
+                    setStatus("", "Ready to assist you");
+                };
+                
+                document.getElementById("record-status").innerText = "Click mic button to speak";
             })
             .catch(err => {
                 console.error("Pipeline failure:", err);
-                updateCard("card-asr", "error", `Audio Processing Issue: ${err.message || err}.<br><br>💡 <b>Quick Fix Checklist</b>:<br>1. Make sure your server is running in terminal: <code>.venv\\Scripts\\python -m uvicorn src.main:app --reload --port 8000</code><br>2. Access the UI via <a href="http://127.0.0.1:8000/static/index.html" target="_blank" style="color:#818cf8; text-decoration:underline;">http://127.0.0.1:8000/static/index.html</a>`);
-                document.getElementById("record-status").innerText = "Failed to process audio.";
+                addChatBubble("Sorry, I had trouble processing your query. Please make sure the server is active.", "assistant");
+                setStatus("", "Ready to assist you");
+                document.getElementById("record-status").innerText = "Click mic button to speak";
             });
         }
 
-        // Upload local audio WAV file
         function uploadAudioFile() {
             const fileInput = document.getElementById("audio-file");
             if (fileInput.files.length === 0) return;
-            
             const file = fileInput.files[0];
             uploadAudioBlob(file);
         }
-
-        function renderPipelineResults(data) {
-            // 1. ASR
-            let langInfo = data.language ? ` <span class="step-badge" style="background: rgba(99, 102, 241, 0.2); color: #818cf8;">Lang: ${data.language.toUpperCase()} (${Math.round((data.language_probability||1.0)*100)}%)</span>` : '';
-            updateCard("card-asr", "success", `Transcribed: <span class="result-highlight">"${data.transcript}"</span>${langInfo}`);
-            
-            // 2. Intent
-            updateCard("card-nlu-intent", "success", `Intent: <span class="result-highlight">${data.intent}</span> (Confidence: ${data.intent_confidence})`);
-            
-            // 3. Entities
-            let entityHtml = "No entities found.";
-            if (Object.keys(data.entities).length > 0) {
-                entityHtml = Object.entries(data.entities)
-                    .map(([k, v]) => `<span class="entity-tag">${k}: ${v}</span>`)
-                    .join("");
-            }
-            updateCard("card-nlu-entities", "success", entityHtml);
-            
-            // 4. Dialogue state
-            updateCard("card-dialogue", "success", `Response text: <span class="result-highlight">"${data.response_text}"</span><br><br>Dialogue State: <span class="step-badge">${data.dialogue_state}</span>`);
-            
-            // 5. Tool execution
-            if (data.backend_tool_executed) {
-                let toolDetails = `Executed tool: <span class="result-highlight">${data.backend_tool_executed}</span><br><br>`;
-                toolDetails += `Result: <code style="background: rgba(255,255,255,0.06); padding: 4px; border-radius: 4px; font-size: 0.85rem;">${JSON.stringify(data.backend_tool_result)}</code>`;
-                updateCard("card-tool", "success", toolDetails);
-            } else {
-                updateCard("card-tool", "", "No tool call was triggered on this turn.");
-            }
-            
-            // 6. TTS response
-            updateCard("card-tts", "success", "Audio synthesis ready.");
-            const audioOut = document.getElementById("audio-output");
-            audioOut.src = `data:audio/wav;base64,${data.audio_response_base64}`;
-            document.getElementById("player-container").style.display = "flex";
-            
-            // Trace URL
-            if (data.trace_url) {
-                document.getElementById("trace-container").style.display = "flex";
-                document.getElementById("trace-link").href = data.trace_url;
-            }
-            
-            // Refresh metrics dashboard immediately
-            fetchMetrics();
-        }
-
-        async function fetchMetrics() {
-            try {
-                const apiEndpoint = (window.location.protocol.startsWith('http') && window.location.port === '8000') 
-                    ? '/api/v1/monitoring/metrics' 
-                    : 'http://127.0.0.1:8000/api/v1/monitoring/metrics';
-                    
-                const res = await fetch(apiEndpoint);
-                if (res.ok) {
-                    const data = await res.json();
-                    document.getElementById("metrics-turns").innerText = data.total_turns;
-                    document.getElementById("metrics-success").innerText = data.task_success_rate_percent + "%";
-                    document.getElementById("metrics-asr").innerText = data.avg_asr_latency_ms + "ms";
-                    document.getElementById("metrics-dialogue").innerText = data.avg_dialogue_latency_ms + "ms";
-                }
-            } catch (err) {
-                console.error("Failed to load metrics:", err);
-            }
-        }
-        
-        // Auto-refresh metrics every 5 seconds
-        setInterval(fetchMetrics, 5000);
-        window.addEventListener("DOMContentLoaded", fetchMetrics);
     </script>
 </body>
 </html>
