@@ -83,6 +83,30 @@ class DialogueManager:
             if v is not None:
                 context[k] = v
 
+        # Determine waiting slot based on current state
+        waiting_slot = None
+        if current_state == DialogueState.AWAITING_ORDER_ID:
+            waiting_slot = "order_id"
+        elif current_state == DialogueState.AWAITING_EMAIL:
+            waiting_slot = "email"
+        elif current_state == DialogueState.AWAITING_PHONE:
+            waiting_slot = "phone_number"
+        elif current_state == DialogueState.AWAITING_ADDRESS:
+            waiting_slot = "address"
+        elif current_state == DialogueState.AWAITING_REASON:
+            waiting_slot = "reason"
+        elif current_state == DialogueState.AWAITING_CANCEL_CONFIRM:
+            waiting_slot = "confirmation (yes/no)"
+
+        active_intent = context.get("workflow", "None")
+
+        logger.debug("--- Dialogue Turn Debug ---")
+        logger.debug("Incoming transcript: '%s'", text)
+        logger.debug("Current session state: %s", current_state)
+        logger.debug("Active intent: %s", active_intent)
+        logger.debug("Waiting slot: %s", waiting_slot)
+        logger.debug("Extracted entities: %s", entities)
+
         # 2. Global Interruption Check (Greetings or Goodbyes)
         if intent == "greeting":
             session["state"] = DialogueState.IDLE
@@ -348,6 +372,11 @@ class DialogueManager:
             self._reset_workflow_context(session)
 
         session["history"].append({"speaker": "assistant", "text": response_text})
+        
+        next_state = session["state"]
+        logger.debug("State transition: %s -> %s", current_state, next_state)
+        logger.debug("---------------------------")
+        
         return {
             "response": response_text, 
             "state": session["state"],

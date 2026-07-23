@@ -11,7 +11,7 @@ from src.asr.whisper_asr import WhisperASR
 from src.asr.normalizer import TranscriptNormalizer
 from src.nlu.classifier import MockIntentClassifier
 from src.nlu.extractor import LLMEntityExtractor
-from src.dialogue.manager import DialogueManager
+from src.dialogue.manager import DialogueManager, DialogueState
 from src.tts.base import MockTTS
 
 logger = logging.getLogger("src.api.routes")
@@ -121,9 +121,31 @@ def execute_pipeline(audio_bytes: bytes, session_id: str) -> VoiceProcessRespons
         transcript = "[Silence]"
         
     # 2. NLU Intent Classification
-    nlu_res = nlu_classifier.classify(transcript)
-    intent = nlu_res["intent"]
-    confidence = nlu_res["confidence"]
+    session = dialogue_manager._get_or_create_session(session_id)
+    current_state = session.get("state", DialogueState.IDLE)
+    
+    # Check if the user is explicitly starting a completely new request by searching for high-confidence triggers.
+    is_new_request = False
+    if current_state != DialogueState.IDLE:
+        temp_nlu = nlu_classifier.classify(transcript)
+        expected_workflow = session["context"].get("workflow", "unknown")
+        if temp_nlu["intent"] != "unknown" and temp_nlu["intent"] != expected_workflow and temp_nlu["confidence"] >= 0.75:
+            is_new_request = True
+            
+    if current_state == DialogueState.IDLE or is_new_request:
+        nlu_res = nlu_classifier.classify(transcript)
+        intent = nlu_res["intent"]
+        confidence = nlu_res["confidence"]
+        if is_new_request:
+            logger.info("Interruption detected! Switched to new intent: %s", intent)
+    else:
+        # Preserve active intent / workflow
+        intent = session["context"].get("workflow", "unknown")
+        confidence = 1.0
+        logger.info(
+            "Dialogue session %s is active in state %s. Skipping intent classification and preserving workflow '%s'.",
+            session_id, current_state, intent
+        )
     
     # 3. NLU Entity Extraction
     entities = nlu_extractor.extract(transcript)

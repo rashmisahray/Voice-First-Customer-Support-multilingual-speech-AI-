@@ -1,3 +1,4 @@
+import re
 import logging
 from typing import Dict, Any
 from src.core.config import settings
@@ -118,7 +119,9 @@ class MockIntentClassifier(BaseIntentClassifier):
         for intent, keywords in self.rules.items():
             matches = 0
             for keyword in keywords:
-                if keyword in text_lower:
+                # Escape the keyword and match using word boundaries to prevent false substring matches
+                pattern = rf'\b{re.escape(keyword.lower())}\b'
+                if re.search(pattern, text_lower, re.IGNORECASE):
                     # Grant higher weight for multi-word phrase matches
                     matches += 1.5 if len(keyword.split()) > 1 else 1.0
             
