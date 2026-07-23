@@ -12,12 +12,11 @@ class BaseIntentClassifier:
 class MockIntentClassifier(BaseIntentClassifier):
     """
     Modular keyword and rule-based Intent Classifier for Vani.
-    Analyzes user transcript and returns classified intent and confidence score.
-    Supports English, Hindi, and Hinglish phonetic speech variations.
+    Supports 20 production customer support intents in English, Hindi, and Hinglish.
     """
 
     def __init__(self):
-        # Define trigger keyword lists for each target intent with Hinglish phonetic support
+        # Define trigger keyword lists for 20 intents
         self.rules = {
             "greeting": [
                 "hello", "hi", "namaste", "hey", "good morning", "good evening", "greetings", "kaise", "kya haal"
@@ -36,6 +35,56 @@ class MockIntentClassifier(BaseIntentClassifier):
             "update_address": [
                 "update address", "change address", "new address", "shipping address", "delivery address", 
                 "update my address", "address", "location", "pata", "ptta", "badalna", "update", "makan"
+            ],
+            "cancel_order": [
+                "cancel order", "cancel my order", "abort order", "cancel karo", "order cancel", "stop order"
+            ],
+            "refund_request": [
+                "refund", "money back", "refund request", "paise wapas", "refund chahiye", "return money"
+            ],
+            "payment_issue": [
+                "payment failed", "payment issue", "declined", "card declined", "failed transaction", "payment", 
+                "transaction error", "paise kat gaye", "billing", "charges"
+            ],
+            "product_inquiry": [
+                "in stock", "product information", "size chart", "is it available", "availability", "specifications", 
+                "product inquiry", "details about", "stock", "color options"
+            ],
+            "shipping_policy": [
+                "shipping time", "how long to ship", "shipping cost", "delivery fee", "delivery policy", 
+                "international shipping", "shipping policy", "delivers to"
+            ],
+            "return_policy": [
+                "return policy", "how to return", "return window", "return label", "can i return", 
+                "wapas karna", "return process"
+            ],
+            "human_agent": [
+                "talk to human", "live agent", "customer support representative", "speak to someone", "human", 
+                "agent", "representative", "operator", "call support", "live support"
+            ],
+            "store_hours": [
+                "store hours", "what time do you open", "closing time", "open hours", "timings", "when does store close"
+            ],
+            "store_location": [
+                "store address", "where is the store", "directions to store", "nearest store", "find store", "location"
+            ],
+            "account_creation": [
+                "create account", "sign up", "register", "join", "new user", "make an account"
+            ],
+            "promotions_coupons": [
+                "coupon", "discount code", "promo", "discount", "offer", "sale", "deals", "promotions"
+            ],
+            "feedback_complaint": [
+                "complaint", "feedback", "file a complaint", "bad service", "review", "suggest", "unhappy"
+            ],
+            "order_modification": [
+                "modify order", "change items", "change order", "add items", "remove items", "order edit"
+            ],
+            "damaged_item": [
+                "damaged", "broken", "defective", "torn", "not working", "damaged item", "received broken"
+            ],
+            "warranty_info": [
+                "warranty", "guarantee", "warranty period", "is it covered", "warranty policy"
             ]
         }
 

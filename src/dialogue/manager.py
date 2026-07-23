@@ -3,6 +3,7 @@ from typing import Dict, Any, Optional
 from enum import Enum
 from src.core.config import settings
 from src.tools.backend_client import BackendClient
+from src.nlu.llm_fallback import LLMFallback
 
 logger = logging.getLogger("src.dialogue.manager")
 
@@ -23,7 +24,8 @@ class DialogueManager:
     def __init__(self, backend_client: Optional[BackendClient] = None):
         self.sessions: Dict[str, Dict[str, Any]] = {}
         self.backend_client = backend_client or BackendClient()
-        logger.info("Initializing DialogueManager with BackendClient.")
+        self.llm_fallback = LLMFallback()
+        logger.info("Initializing DialogueManager with BackendClient and LLMFallback.")
 
     def _get_or_create_session(self, session_id: str) -> Dict[str, Any]:
         """Retrieves an existing dialogue session or initializes a new state container."""
@@ -173,10 +175,12 @@ class DialogueManager:
                     session["state"] = DialogueState.AWAITING_PHONE
                     response_text = "I can help you update your address. First, could you tell me your 10-digit registered phone number?"
 
-            else:
                 # Fallback for unknown intent
                 session["state"] = DialogueState.FALLBACK
-                response_text = "I'm not sure I understand that request. Could you please rephrase, or say 'order status' or 'reset password' if you need help?"
+                if settings.dialogue.enable_llm_fallback:
+                    response_text = self.llm_fallback.generate_response(text, session_id)
+                else:
+                    response_text = "I'm not sure I understand that request. Could you please rephrase, or say 'order status' or 'reset password' if you need help?"
                 session["state"] = DialogueState.IDLE
 
         # State: AWAITING_ORDER_ID
