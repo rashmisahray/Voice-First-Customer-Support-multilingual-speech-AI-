@@ -14,6 +14,7 @@ class DialogueState(str, Enum):
     AWAITING_PHONE = "awaiting_phone"
     AWAITING_ADDRESS = "awaiting_address"
     AWAITING_REASON = "awaiting_reason"
+    AWAITING_CANCEL_CONFIRM = "awaiting_cancel_confirm"
     FALLBACK = "fallback"
 
 class DialogueManager:
@@ -153,11 +154,8 @@ class DialogueManager:
                 context["workflow"] = "cancel_order"
                 if "order_id" in context:
                     order_id = context["order_id"]
-                    tool_executed = "cancel_order"
-                    tool_result = self.backend_client.cancel_order(order_id)
-                    response_text = f"I have successfully cancelled your order {order_id}."
-                    session["state"] = DialogueState.IDLE
-                    self._reset_workflow_context(session)
+                    session["state"] = DialogueState.AWAITING_CANCEL_CONFIRM
+                    response_text = f"Are you sure you want to cancel order {order_id}? Please say yes or confirm."
                 else:
                     session["state"] = DialogueState.AWAITING_ORDER_ID
                     response_text = "I can help you cancel your order. What is your 6-digit Order ID?"
@@ -226,11 +224,8 @@ class DialogueManager:
                 workflow = context.get("workflow", "order_status")
                 
                 if workflow == "cancel_order":
-                    tool_executed = "cancel_order"
-                    tool_result = self.backend_client.cancel_order(order_id)
-                    response_text = f"I have successfully cancelled your order {order_id}."
-                    session["state"] = DialogueState.IDLE
-                    self._reset_workflow_context(session)
+                    session["state"] = DialogueState.AWAITING_CANCEL_CONFIRM
+                    response_text = f"Are you sure you want to cancel order {order_id}? Please say yes or confirm."
                 elif workflow == "refund_request":
                     if "reason" in context:
                         reason = context["reason"]
@@ -272,6 +267,37 @@ class DialogueManager:
                     response_text = "I have the reason. Now, what is the 6-digit Order ID?"
             else:
                 response_text = "Could you please tell me the reason for the refund?"
+
+        # State: AWAITING_CANCEL_CONFIRM
+        elif current_state == DialogueState.AWAITING_CANCEL_CONFIRM:
+            clean_text = text.lower().strip()
+            order_id = context.get("order_id")
+            
+            # Simple keyword check for yes/confirm
+            positive_words = ["yes", "confirm", "haan", "ha", "sure", "okay", "ok", "हाँ", "हा"]
+            negative_words = ["no", "abort", "cancel", "nahi", "na", "ना", "नही"]
+            
+            is_positive = any(w in clean_text for w in positive_words)
+            is_negative = any(w in clean_text for w in negative_words)
+            
+            if is_positive:
+                if order_id:
+                    tool_executed = "cancel_order"
+                    tool_result = self.backend_client.cancel_order(order_id)
+                    if tool_result.get("success"):
+                        response_text = f"I have successfully cancelled your order {order_id}."
+                    else:
+                        response_text = f"I'm sorry, I failed to cancel order {order_id} because it was not found."
+                else:
+                    response_text = "I don't have a valid Order ID to cancel."
+                session["state"] = DialogueState.IDLE
+                self._reset_workflow_context(session)
+            elif is_negative:
+                response_text = "Okay, I will not cancel your order. How else can I help you today?"
+                session["state"] = DialogueState.IDLE
+                self._reset_workflow_context(session)
+            else:
+                response_text = f"Please say yes to confirm cancellation of order {order_id}, or say no to abort."
 
         # State: AWAITING_EMAIL
         elif current_state == DialogueState.AWAITING_EMAIL:

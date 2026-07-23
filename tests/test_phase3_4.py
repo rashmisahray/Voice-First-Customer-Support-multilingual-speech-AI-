@@ -72,11 +72,16 @@ def test_dialogue_manager_cancel_order_slot_filling(dialogue_manager):
     assert dialogue_manager.sessions["default"]["state"] == DialogueState.AWAITING_ORDER_ID
     assert "What is your 6-digit Order ID" in res1["response"]
 
-    # Turn 2: Provide Order ID
+    # Turn 2: Provide Order ID -> should move to AWAITING_CANCEL_CONFIRM
     res2 = dialogue_manager.process_turn("unknown", {"order_id": "ORD-876543"}, "876543")
+    assert dialogue_manager.sessions["default"]["state"] == DialogueState.AWAITING_CANCEL_CONFIRM
+    assert "Are you sure" in res2["response"]
+
+    # Turn 3: Confirm yes
+    res3 = dialogue_manager.process_turn("unknown", {}, "yes, confirm")
     assert dialogue_manager.sessions["default"]["state"] == DialogueState.IDLE
-    assert "successfully cancelled your order ORD-876543" in res2["response"]
-    assert res2["tool_executed"] == "cancel_order"
+    assert "successfully cancelled your order ORD-876543" in res3["response"]
+    assert res3["tool_executed"] == "cancel_order"
 
 def test_dialogue_manager_refund_slot_filling(dialogue_manager):
     # Turn 1: Request refund

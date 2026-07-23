@@ -7,6 +7,8 @@ from src.core.config import settings
 from src.core.logger import setup_logging, logging
 from src.api.routes import router
 
+from src.database.db_manager import init_db
+
 # Setup logging immediately
 setup_logging()
 logger = logging.getLogger("src.main")
@@ -16,6 +18,7 @@ async def lifespan(app: FastAPI):
     # Startup actions
     logger.info("Starting up %s (version: %s) in %s environment...", 
                 settings.app.name, settings.app.version, settings.app.env)
+    init_db()
     yield
     # Shutdown actions
     logger.info("Shutting down %s...", settings.app.name)

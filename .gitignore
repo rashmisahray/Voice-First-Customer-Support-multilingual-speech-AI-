@@ -117,3 +117,6 @@ configs/config.local.yaml
 # Logs
 logs/
 *.log
+
+# Data folder for SQLite DB
+data/
