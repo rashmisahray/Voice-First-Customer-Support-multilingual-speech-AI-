@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from src.core.config import settings
 from src.core.observability import observe, get_trace_url
 from src.asr.whisper_asr import WhisperASR
+from src.asr.normalizer import TranscriptNormalizer
 from src.nlu.classifier import MockIntentClassifier
 from src.nlu.extractor import MockEntityExtractor
 from src.dialogue.manager import DialogueManager
@@ -18,6 +19,7 @@ router = APIRouter()
 
 # Instantiate pipeline services
 asr_service = WhisperASR(model_size=settings.asr.model_name)
+transcript_normalizer = TranscriptNormalizer()
 nlu_classifier = MockIntentClassifier()
 nlu_extractor = MockEntityExtractor()
 dialogue_manager = DialogueManager()
@@ -102,12 +104,17 @@ def execute_pipeline(audio_bytes: bytes, session_id: str) -> VoiceProcessRespons
     # 1. ASR - Automatic Speech Recognition with language detection
     try:
         asr_res = asr_service.transcribe_with_meta(audio_bytes)
-        transcript = asr_res["text"]
+        raw_transcript = asr_res["text"]
         detected_language = asr_res.get("language", "en")
         language_probability = asr_res.get("language_probability", 1.0)
     except Exception as e:
         logger.error("Voice Pipeline Error during ASR: %s", e)
         raise HTTPException(status_code=422, detail=f"ASR Transcription failed: {e}")
+        
+    # Apply Transcript Normalization Layer
+    transcript = transcript_normalizer.normalize(raw_transcript)
+    if transcript != raw_transcript:
+        logger.info("ASR transcript normalized from '%s' to '%s'", raw_transcript, transcript)
         
     # If silence or empty transcript
     if not transcript.strip():

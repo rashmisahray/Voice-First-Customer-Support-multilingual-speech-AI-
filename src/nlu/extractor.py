@@ -37,9 +37,9 @@ class MockEntityExtractor(BaseEntityExtractor):
             logger.info("NLU Extractor: Extracted Phone Number: %s", entities["phone_number"])
 
         # 3. Email: Standard email pattern & spoken ASR phonetic variations
-        # Normalize spoken '@' pronunciations: "adurate", "ad rate", "at rate", "atrate", "drate", "at"
-        spoken_text = re.sub(r'adurate|ad\s*rate|at\s*rate|atrate|drate|\bat\b', '@', cleaned_text, flags=re.IGNORECASE)
-        spoken_text = re.sub(r'\s*@\s*', '@', spoken_text)
+        # Normalize spoken '@' pronunciations: "at the rate", "at rate", "adurate", "ad rate", "atrate", "drate", "at"
+        spoken_text = re.sub(r'at\s*the\s*rate,?\s*|adurate|ad\s*rate|at\s*rate|atrate|drate|\bat\b', '@', cleaned_text, flags=re.IGNORECASE)
+        spoken_text = re.sub(r'\s*@,?\s*', '@', spoken_text)
         spoken_text = re.sub(r'\s+dot\s+', '.', spoken_text, flags=re.IGNORECASE)
 
         email_match = re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', spoken_text)
