@@ -125,7 +125,7 @@ class DialogueManager:
             "parts": [{"text": text}]
         })
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
         payload = {
             "contents": contents,
             "systemInstruction": {
@@ -189,7 +189,7 @@ class DialogueManager:
 
     def _synthesize_final_reply(self, user_query: str, tool_name: str, tool_result: Dict[str, Any], api_key: str) -> str:
         """Invokes Gemini a second time to translate tool outcome into a natural response."""
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
         prompt = (
             f"The user query was: '{user_query}'\n"
             f"The backend tool '{tool_name}' was executed successfully.\n"
