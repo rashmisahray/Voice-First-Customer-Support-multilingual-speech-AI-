@@ -120,42 +120,50 @@ def execute_pipeline(audio_bytes: bytes, session_id: str) -> VoiceProcessRespons
     if not transcript.strip():
         transcript = "[Silence]"
         
-    # 2. NLU Intent Classification
-    session = dialogue_manager._get_or_create_session(session_id)
-    current_state = session.get("state", DialogueState.IDLE)
+    api_key = os.environ.get("GEMINI_API_KEY")
     
-    # Check if the user is explicitly starting a completely new request by searching for high-confidence triggers.
-    is_new_request = False
-    if current_state != DialogueState.IDLE:
-        temp_nlu = nlu_classifier.classify(transcript)
-        expected_workflow = session["context"].get("workflow", "unknown")
-        if temp_nlu["intent"] != "unknown" and temp_nlu["intent"] != expected_workflow and temp_nlu["confidence"] >= 0.75:
-            is_new_request = True
-            
-    if current_state == DialogueState.IDLE or is_new_request:
-        nlu_res = nlu_classifier.classify(transcript)
-        intent = nlu_res["intent"]
-        confidence = nlu_res["confidence"]
-        if is_new_request:
-            logger.info("Interruption detected! Switched to new intent: %s", intent)
+    if api_key:
+        logger.info("Optimized Pipeline: Routing directly to Gemini DialogueManager, bypassing local ASR/NLU classifier/extractor steps.")
+        dialogue_res = dialogue_manager.process_turn("unknown", {}, transcript, session_id)
+        response_text = dialogue_res["response"]
+        next_state = dialogue_res["state"]
+        tool_executed = dialogue_res["tool_executed"]
+        tool_result = dialogue_res["tool_result"]
     else:
-        # Preserve active intent / workflow
-        intent = session["context"].get("workflow", "unknown")
-        confidence = 1.0
-        logger.info(
-            "Dialogue session %s is active in state %s. Skipping intent classification and preserving workflow '%s'.",
-            session_id, current_state, intent
-        )
-    
-    # 3. NLU Entity Extraction
-    entities = nlu_extractor.extract(transcript)
-    
-    # 4. Dialogue Management & Tool Execution
-    dialogue_res = dialogue_manager.process_turn(intent, entities, transcript, session_id)
-    response_text = dialogue_res["response"]
-    next_state = dialogue_res["state"]
-    tool_executed = dialogue_res["tool_executed"]
-    tool_result = dialogue_res["tool_result"]
+        # 2. NLU Intent Classification
+        session = dialogue_manager._get_or_create_session(session_id)
+        current_state = session.get("state", DialogueState.IDLE)
+        
+        is_new_request = False
+        if current_state != DialogueState.IDLE:
+            temp_nlu = nlu_classifier.classify(transcript)
+            expected_workflow = session["context"].get("workflow", "unknown")
+            if temp_nlu["intent"] != "unknown" and temp_nlu["intent"] != expected_workflow and temp_nlu["confidence"] >= 0.75:
+                is_new_request = True
+                
+        if current_state == DialogueState.IDLE or is_new_request:
+            nlu_res = nlu_classifier.classify(transcript)
+            intent = nlu_res["intent"]
+            confidence = nlu_res["confidence"]
+            if is_new_request:
+                logger.info("Interruption detected! Switched to new intent: %s", intent)
+        else:
+            intent = session["context"].get("workflow", "unknown")
+            confidence = 1.0
+            logger.info(
+                "Dialogue session %s is active in state %s. Skipping intent classification and preserving workflow '%s'.",
+                session_id, current_state, intent
+            )
+        
+        # 3. NLU Entity Extraction
+        entities = nlu_extractor.extract(transcript)
+        
+        # 4. Dialogue Management & Tool Execution
+        dialogue_res = dialogue_manager.process_turn(intent, entities, transcript, session_id)
+        response_text = dialogue_res["response"]
+        next_state = dialogue_res["state"]
+        tool_executed = dialogue_res["tool_executed"]
+        tool_result = dialogue_res["tool_result"]
     
     # 5. TTS Response Synthesis (convert text to audio)
     try:

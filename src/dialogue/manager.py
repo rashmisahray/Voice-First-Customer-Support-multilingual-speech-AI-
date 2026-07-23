@@ -112,6 +112,10 @@ class DialogueManager:
 
     def _process_gemini_turn(self, text: str, session: Dict[str, Any], api_key: str) -> Dict[str, Any]:
         """Orchestrates dialogue using the live Gemini API."""
+        # Prune conversation history to the last 10 turns to minimize payload token size and latency
+        if len(session["history"]) > 10:
+            session["history"] = session["history"][-10:]
+
         # 1. Build conversational history payload
         contents = []
         for turn in session["history"][:-1]:  # Exclude current user message to avoid duplicate

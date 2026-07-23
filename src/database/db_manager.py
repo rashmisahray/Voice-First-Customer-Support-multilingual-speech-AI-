@@ -14,7 +14,7 @@ def get_db_connection() -> sqlite3.Connection:
     DB_DIR.mkdir(parents=True, exist_ok=True)
     db_existed = DB_PATH.exists()
     
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     
     # Double check if tables actually exist, just in case of empty files

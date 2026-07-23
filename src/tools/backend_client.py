@@ -8,20 +8,36 @@ logger = logging.getLogger("src.tools.backend_client")
 class BackendClient:
     """Backend client executing customer support transactions against the SQLite database."""
 
+    def __init__(self):
+        self._conn: Optional[sqlite3.Connection] = None
+
+    def _get_connection(self) -> sqlite3.Connection:
+        """Lazily obtains and caches a single reusable database connection."""
+        if self._conn is None:
+            self._conn = get_db_connection()
+        return self._conn
+
+    def __del__(self):
+        """Cleans up the connection cleanly when the client object is destroyed."""
+        if self._conn is not None:
+            try:
+                self._conn.close()
+            except Exception:
+                pass
+
     def get_order_status(self, order_id: str) -> Dict[str, Any]:
         """Fetches status of a specific order from the database."""
         logger.info("Backend Tools: Fetching status for Order ID: %s", order_id)
         clean_id = order_id.upper().strip()
         
         try:
-            conn = get_db_connection()
+            conn = self._get_connection()
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT status, delivery_date, carrier, amount FROM orders WHERE order_id = ?",
                 (clean_id,)
             )
             row = cursor.fetchone()
-            conn.close()
             
             if row:
                 logger.info("Backend Tools: Order found in DB. Status: %s", row["status"])
@@ -49,11 +65,10 @@ class BackendClient:
         clean_email = email.lower().strip()
         
         try:
-            conn = get_db_connection()
+            conn = self._get_connection()
             cursor = conn.cursor()
             cursor.execute("SELECT email FROM customers WHERE email = ?", (clean_email,))
             row = cursor.fetchone()
-            conn.close()
             
             if row:
                 return {
@@ -75,7 +90,7 @@ class BackendClient:
         clean_address = address.strip()
         
         try:
-            conn = get_db_connection()
+            conn = self._get_connection()
             cursor = conn.cursor()
             cursor.execute(
                 "UPDATE customers SET address = ? WHERE phone_number = ?",
@@ -83,7 +98,6 @@ class BackendClient:
             )
             rows_updated = cursor.rowcount
             conn.commit()
-            conn.close()
             
             if rows_updated > 0:
                 return {
@@ -104,7 +118,7 @@ class BackendClient:
         clean_id = order_id.upper().strip()
         
         try:
-            conn = get_db_connection()
+            conn = self._get_connection()
             cursor = conn.cursor()
             cursor.execute(
                 "UPDATE orders SET status = 'Cancelled' WHERE order_id = ?",
@@ -112,7 +126,6 @@ class BackendClient:
             )
             rows_updated = cursor.rowcount
             conn.commit()
-            conn.close()
             
             if rows_updated > 0:
                 return {
@@ -133,7 +146,7 @@ class BackendClient:
         clean_id = order_id.upper().strip()
         
         try:
-            conn = get_db_connection()
+            conn = self._get_connection()
             cursor = conn.cursor()
             cursor.execute(
                 "UPDATE orders SET status = 'Refunded' WHERE order_id = ?",
@@ -141,7 +154,6 @@ class BackendClient:
             )
             rows_updated = cursor.rowcount
             conn.commit()
-            conn.close()
             
             if rows_updated > 0:
                 return {

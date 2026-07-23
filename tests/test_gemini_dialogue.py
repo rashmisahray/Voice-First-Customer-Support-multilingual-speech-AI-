@@ -109,3 +109,40 @@ def test_dialogue_manager_gemini_tool_execution(mock_post):
         assert res["tool_executed"] == "get_order_status"
         assert res["tool_result"]["success"] is True
         assert res["tool_result"]["status"] == "Shipped"
+
+@patch("httpx.Client.post")
+def test_dialogue_manager_sliding_window_pruning(mock_post):
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "candidates": [{
+            "content": {
+                "parts": [{
+                    "text": json.dumps({
+                        "intent": "greeting",
+                        "tool": None,
+                        "entities": {},
+                        "missing_slots": [],
+                        "assistant_reply": "Hi"
+                    })
+                }]
+            }
+        }]
+    }
+    mock_post.return_value = mock_resp
+
+    with patch.dict(os.environ, {"GEMINI_API_KEY": "fake_gemini_key"}):
+        dm = DialogueManager()
+        session = dm._get_or_create_session("default")
+        
+        # Seed history with 12 turns (6 user, 6 model)
+        for i in range(6):
+            session["history"].append({"role": "user", "text": f"User message {i}"})
+            session["history"].append({"role": "model", "text": f"Model reply {i}"})
+            
+        # Process new turn -> should trigger pruning to keep latest 10 turns
+        dm.process_turn("unknown", {}, "Latest user turn")
+        
+        assert len(session["history"]) == 11
+        # The first turn in history should be user message 1, model reply 1 (since 0 got pruned)
+        assert session["history"][0]["text"] == "Model reply 1"
