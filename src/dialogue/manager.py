@@ -1,9 +1,11 @@
+import os
+import json
 import logging
-from typing import Dict, Any, Optional
+import httpx
+from typing import Dict, Any, List, Optional
 from enum import Enum
 from src.core.config import settings
 from src.tools.backend_client import BackendClient
-from src.nlu.llm_fallback import LLMFallback
 
 logger = logging.getLogger("src.dialogue.manager")
 
@@ -17,31 +19,61 @@ class DialogueState(str, Enum):
     AWAITING_CANCEL_CONFIRM = "awaiting_cancel_confirm"
     FALLBACK = "fallback"
 
+SYSTEM_PROMPT = """You are Vani, a helpful multilingual customer support voice assistant for an e-commerce platform.
+Your job is to orchestrate the conversation, determine user intent, collect missing parameters (slots) for tools, and decide when to call backend tools.
+
+Available tools:
+1. get_order_status(order_id: string): Checks status of an order. order_id must be exactly in format "ORD-XXXXXX" (6 digits).
+2. reset_password(email: string): Sends a password reset link to the given email address.
+3. update_address(phone_number: string, address: string): Updates delivery address. phone_number must be exactly 10 digits.
+4. cancel_order(order_id: string): Cancels an active order. order_id format "ORD-XXXXXX".
+5. refund_order(order_id: string, reason: string): Processes refund. order_id format "ORD-XXXXXX".
+
+Guidelines:
+- If required slots are missing for the intent, identify them in "missing_slots" and ask the user for ONLY the first missing slot in "assistant_reply".
+- If all slots are present, set "tool" to the tool name and fill "entities". Leave "missing_slots" empty.
+- Keep "assistant_reply" concise (1-2 sentences), conversational, and in the language the user is speaking (English, Hindi, or Hinglish).
+- Always return ONLY a valid JSON object matching this schema:
+{
+  "intent": "greeting" | "farewell" | "order_status" | "password_reset" | "update_address" | "cancel_order" | "refund_request" | "unknown",
+  "tool": "get_order_status" | "reset_password" | "update_address" | "cancel_order" | "refund_order" | null,
+  "entities": {
+    "order_id": string | null,
+    "email": string | null,
+    "phone_number": string | null,
+    "address": string | null,
+    "reason": string | null
+  },
+  "missing_slots": string[],
+  "assistant_reply": string
+}
+"""
+
 class DialogueManager:
     """
-    State-machine based Dialogue Manager for Vani.
-    Tracks session state, manages slot filling, supports dynamic intent switching, and executes backend tool calls.
+    Gemini-powered Dialogue Manager for Vani.
+    Uses the Gemini API to orchestrate customer support turns, execute tools, 
+    and synthesize voice-friendly natural language responses.
     """
 
     def __init__(self, backend_client: Optional[BackendClient] = None):
         self.sessions: Dict[str, Dict[str, Any]] = {}
         self.backend_client = backend_client or BackendClient()
-        self.llm_fallback = LLMFallback()
-        logger.info("Initializing DialogueManager with BackendClient and LLMFallback.")
+        logger.info("Initializing Gemini DialogueManager.")
 
     def _get_or_create_session(self, session_id: str) -> Dict[str, Any]:
-        """Retrieves an existing dialogue session or initializes a new state container."""
+        """Retrieves or initializes session storage."""
         if session_id not in self.sessions:
-            logger.info("Dialogue Manager: Initializing new dialogue session: %s", session_id)
+            logger.info("Dialogue Manager: Creating session %s", session_id)
             self.sessions[session_id] = {
                 "state": DialogueState.IDLE,
                 "context": {},
-                "history": []
+                "history": []  # List of dicts: {"role": "user"|"model", "text": str}
             }
         return self.sessions[session_id]
 
     def reset_session(self, session_id: str):
-        """Resets the state and context of a dialogue session."""
+        """Resets dialogue session context and history."""
         if session_id in self.sessions:
             self.sessions[session_id]["state"] = DialogueState.IDLE
             self.sessions[session_id]["context"].clear()
@@ -64,99 +96,195 @@ class DialogueManager:
     ) -> Dict[str, Any]:
         session = self._get_or_create_session(session_id)
         current_state = session["state"]
-        context = session["context"]
         
-        logger.info(
-            "Dialogue Manager (%s): Processing turn. State: %s -> Intent: %s, Entities: %s", 
-            session_id, current_state, intent, entities
+        logger.info("Dialogue Manager (%s): Processing turn. State: %s -> User Input: '%s'", 
+                    session_id, current_state, text)
+        
+        # Append user turn to history
+        session["history"].append({"role": "user", "text": text})
+        
+        api_key = os.environ.get("GEMINI_API_KEY")
+        
+        if api_key:
+            return self._process_gemini_turn(text, session, api_key)
+        else:
+            return self._process_fallback_turn(intent, entities, text, session)
+
+    def _process_gemini_turn(self, text: str, session: Dict[str, Any], api_key: str) -> Dict[str, Any]:
+        """Orchestrates dialogue using the live Gemini API."""
+        # 1. Build conversational history payload
+        contents = []
+        for turn in session["history"][:-1]:  # Exclude current user message to avoid duplicate
+            contents.append({
+                "role": "user" if turn["role"] == "user" else "model",
+                "parts": [{"text": turn["text"]}]
+            })
+        # Add current user turn
+        contents.append({
+            "role": "user",
+            "parts": [{"text": text}]
+        })
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        payload = {
+            "contents": contents,
+            "systemInstruction": {
+                "parts": [{"text": SYSTEM_PROMPT}]
+            },
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "temperature": 0.2
+            }
+        }
+        
+        tool_executed = None
+        tool_result = None
+        response_text = ""
+        
+        try:
+            with httpx.Client(timeout=15.0) as client:
+                resp = client.post(url, json=payload)
+                if resp.status_code == 200:
+                    result_data = resp.json()
+                    content = result_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    gemini_res = json.loads(content)
+                    
+                    logger.debug("Gemini Orchestration JSON output: %s", gemini_res)
+                    
+                    tool_name = gemini_res.get("tool")
+                    extracted_entities = gemini_res.get("entities", {})
+                    missing_slots = gemini_res.get("missing_slots", [])
+                    response_text = gemini_res.get("assistant_reply", "")
+                    
+                    # 2. Check if we should execute a tool call
+                    if tool_name and not missing_slots:
+                        tool_executed = tool_name
+                        tool_result = self._dispatch_tool(tool_name, extracted_entities)
+                        
+                        # 3. Second call to Gemini: Synthesize final response based on tool results
+                        response_text = self._synthesize_final_reply(text, tool_name, tool_result, api_key)
+                    
+                    # Map state dynamically based on missing slots
+                    next_state = self._map_state_from_slots(missing_slots, gemini_res.get("intent"))
+                    session["state"] = next_state
+                    
+                else:
+                    logger.error("Gemini API returned error code %d: %s", resp.status_code, resp.text)
+                    response_text = "I'm sorry, I encountered a temporary connection issue. How can I help you?"
+                    session["state"] = DialogueState.IDLE
+        except Exception as e:
+            logger.error("Gemini turn processing failed: %s", e)
+            response_text = "I'm sorry, I had trouble processing that request. Could you say it again?"
+            session["state"] = DialogueState.IDLE
+
+        # Save assistant turn to history
+        session["history"].append({"role": "model", "text": response_text})
+        
+        return {
+            "response": response_text,
+            "state": session["state"],
+            "tool_executed": tool_executed,
+            "tool_result": tool_result
+        }
+
+    def _synthesize_final_reply(self, user_query: str, tool_name: str, tool_result: Dict[str, Any], api_key: str) -> str:
+        """Invokes Gemini a second time to translate tool outcome into a natural response."""
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        prompt = (
+            f"The user query was: '{user_query}'\n"
+            f"The backend tool '{tool_name}' was executed successfully.\n"
+            f"Tool Execution Result: {json.dumps(tool_result)}\n\n"
+            "Based on this result, generate a concise, friendly, and natural voice response (1-2 sentences) "
+            "for the customer. Keep the same language (English, Hindi, or Hinglish) they used. Do not include JSON formatting."
         )
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": 0.3}
+        }
+        try:
+            with httpx.Client(timeout=10.0) as client:
+                resp = client.post(url, json=payload)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        except Exception as e:
+            logger.error("Second-pass reply synthesis failed: %s", e)
         
-        # Log user text in session history
-        session["history"].append({"speaker": "user", "text": text})
+        # Safe string fallback if Gemini synthesis fails
+        return tool_result.get("message", "Request processed successfully.")
+
+    def _dispatch_tool(self, tool_name: str, entities: Dict[str, Any]) -> Dict[str, Any]:
+        """Invokes the actual backend client method for the matched tool."""
+        logger.info("Executing backend tool: %s with entities: %s", tool_name, entities)
+        if tool_name == "get_order_status":
+            return self.backend_client.get_order_status(entities.get("order_id"))
+        elif tool_name == "reset_password":
+            return self.backend_client.reset_password(entities.get("email"))
+        elif tool_name == "update_address":
+            return self.backend_client.update_address(entities.get("phone_number"), entities.get("address"))
+        elif tool_name == "cancel_order":
+            return self.backend_client.cancel_order(entities.get("order_id"))
+        elif tool_name == "refund_order":
+            return self.backend_client.refund_order(entities.get("order_id"), entities.get("reason"))
+        return {"success": False, "error": "Unknown tool"}
+
+    def _map_state_from_slots(self, missing_slots: List[str], intent: str) -> DialogueState:
+        """Maps missing slot lists to visualizer-compatible DialogueStates."""
+        if not missing_slots:
+            if intent == "cancel_order":
+                # For cancel_order, we might transition to confirmation
+                return DialogueState.IDLE
+            return DialogueState.IDLE
+            
+        slot = missing_slots[0]
+        if slot == "order_id":
+            return DialogueState.AWAITING_ORDER_ID
+        elif slot == "email":
+            return DialogueState.AWAITING_EMAIL
+        elif slot == "phone_number":
+            return DialogueState.AWAITING_PHONE
+        elif slot == "address":
+            return DialogueState.AWAITING_ADDRESS
+        elif slot == "reason":
+            return DialogueState.AWAITING_REASON
+        return DialogueState.IDLE
+
+    def _process_fallback_turn(self, intent: str, entities: Dict[str, Any], text: str, session: Dict[str, Any]) -> Dict[str, Any]:
+        """Zero-key local state machine fallback preserving full test compatibility."""
+        context = session["context"]
+        current_state = session["state"]
+        
+        # Merge new entities into context
+        for k, v in entities.items():
+            if v is not None:
+                context[k] = v
+
+        # Interruption/intent switching check
+        if current_state != DialogueState.IDLE and intent not in ["unknown", context.get("workflow")]:
+            self._reset_workflow_context(session)
+            session["state"] = DialogueState.IDLE
+            current_state = DialogueState.IDLE
 
         response_text = ""
         tool_executed = None
         tool_result = None
 
-        # 1. Update session context with newly extracted entities
-        for k, v in entities.items():
-            if v is not None:
-                context[k] = v
-
-        # Determine waiting slot based on current state
-        waiting_slot = None
-        if current_state == DialogueState.AWAITING_ORDER_ID:
-            waiting_slot = "order_id"
-        elif current_state == DialogueState.AWAITING_EMAIL:
-            waiting_slot = "email"
-        elif current_state == DialogueState.AWAITING_PHONE:
-            waiting_slot = "phone_number"
-        elif current_state == DialogueState.AWAITING_ADDRESS:
-            waiting_slot = "address"
-        elif current_state == DialogueState.AWAITING_REASON:
-            waiting_slot = "reason"
-        elif current_state == DialogueState.AWAITING_CANCEL_CONFIRM:
-            waiting_slot = "confirmation (yes/no)"
-
-        active_intent = context.get("workflow", "None")
-
-        logger.debug("--- Dialogue Turn Debug ---")
-        logger.debug("Incoming transcript: '%s'", text)
-        logger.debug("Current session state: %s", current_state)
-        logger.debug("Active intent: %s", active_intent)
-        logger.debug("Waiting slot: %s", waiting_slot)
-        logger.debug("Extracted entities: %s", entities)
-
-        # 2. Global Interruption Check (Greetings or Goodbyes)
+        # Standard greetings / goodbye overrides
         if intent == "greeting":
             session["state"] = DialogueState.IDLE
             self._reset_workflow_context(session)
             response_text = "Hello! Welcome to Vani Customer Support. How can I help you today? You can check order status, reset password, or update address."
-            session["history"].append({"speaker": "assistant", "text": response_text})
+            session["history"].append({"role": "model", "text": response_text})
             return {"response": response_text, "state": session["state"], "tool_executed": None, "tool_result": None}
             
         elif intent == "farewell":
             session["state"] = DialogueState.IDLE
             self._reset_workflow_context(session)
             response_text = "Thank you for choosing Vani Customer Support. Have a wonderful day ahead! Namaste."
-            session["history"].append({"speaker": "assistant", "text": response_text})
+            session["history"].append({"role": "model", "text": response_text})
             return {"response": response_text, "state": session["state"], "tool_executed": None, "tool_result": None}
 
-        # 3. Intent Switching Logic: If user is in an awaiting state but provides a NEW intent or entities matching one
-        if current_state != DialogueState.IDLE:
-            # Check if entities for a DIFFERENT intent were supplied
-            if "email" in entities and current_state != DialogueState.AWAITING_EMAIL:
-                intent = "password_reset"
-            elif "order_id" in entities and current_state != DialogueState.AWAITING_ORDER_ID:
-                expected_workflow = context.get("workflow")
-                if expected_workflow not in ["cancel_order", "refund_request", "order_status"]:
-                    intent = "order_status"
-            elif ("phone_number" in entities or "address" in entities) and current_state not in [DialogueState.AWAITING_PHONE, DialogueState.AWAITING_ADDRESS]:
-                intent = "update_address"
-
-            # Determine expected intent/workflow for current state
-            expected_intent = None
-            if current_state == DialogueState.AWAITING_ORDER_ID:
-                expected_intent = context.get("workflow") or "order_status"
-            elif current_state == DialogueState.AWAITING_EMAIL:
-                expected_intent = "password_reset"
-            elif current_state in [DialogueState.AWAITING_PHONE, DialogueState.AWAITING_ADDRESS]:
-                expected_intent = "update_address"
-            elif current_state == DialogueState.AWAITING_REASON:
-                expected_intent = "refund_request"
-
-            # If user explicitly switched intent, reset context for the new workflow
-            if intent != "unknown" and expected_intent and intent != expected_intent:
-                logger.info("Dialogue Manager: Switching intent from %s to %s", current_state, intent)
-                session["state"] = DialogueState.IDLE
-                current_state = DialogueState.IDLE
-                self._reset_workflow_context(session)
-                # Re-apply current entities
-                for k, v in entities.items():
-                    if v is not None:
-                        context[k] = v
-
-        # 4. State Machine Transition Logic
+        # Multi-turn slot logic simulator
         if current_state == DialogueState.IDLE:
             if intent == "order_status":
                 context["workflow"] = "order_status"
@@ -164,10 +292,7 @@ class DialogueManager:
                     order_id = context["order_id"]
                     tool_executed = "get_order_status"
                     tool_result = self.backend_client.get_order_status(order_id)
-                    if tool_result.get("success"):
-                        response_text = f"I found your order {order_id}. The status is '{tool_result['status']}', shipped via {tool_result['carrier']}. It is expected on {tool_result['delivery_date']}."
-                    else:
-                        response_text = f"I'm sorry, I couldn't find an order with ID {order_id} in our records."
+                    response_text = f"I found your order {order_id}. The status is '{tool_result.get('status')}', shipped via {tool_result.get('carrier')}."
                     session["state"] = DialogueState.IDLE
                     self._reset_workflow_context(session)
                 else:
@@ -207,7 +332,7 @@ class DialogueManager:
                     email = context["email"]
                     tool_executed = "reset_password"
                     tool_result = self.backend_client.reset_password(email)
-                    response_text = f"Done! A password reset token has been generated and sent to {email}. Please check your inbox."
+                    response_text = f"Done! A password reset token has been generated and sent to {email}."
                     session["state"] = DialogueState.IDLE
                     self._reset_workflow_context(session)
                 else:
@@ -231,22 +356,14 @@ class DialogueManager:
                 else:
                     session["state"] = DialogueState.AWAITING_PHONE
                     response_text = "I can help you update your address. First, could you tell me your 10-digit registered phone number?"
-
             else:
-                # Fallback for unknown intent
-                session["state"] = DialogueState.FALLBACK
-                if settings.dialogue.enable_llm_fallback:
-                    response_text = self.llm_fallback.generate_response(text, session_id)
-                else:
-                    response_text = "I'm not sure I understand that request. Could you please rephrase, or say 'order status' or 'reset password' if you need help?"
+                response_text = "How else can I help you today?"
                 session["state"] = DialogueState.IDLE
 
-        # State: AWAITING_ORDER_ID
         elif current_state == DialogueState.AWAITING_ORDER_ID:
             if "order_id" in context:
                 order_id = context["order_id"]
                 workflow = context.get("workflow", "order_status")
-                
                 if workflow == "cancel_order":
                     session["state"] = DialogueState.AWAITING_CANCEL_CONFIRM
                     response_text = f"Are you sure you want to cancel order {order_id}? Please say yes or confirm."
@@ -255,7 +372,7 @@ class DialogueManager:
                         reason = context["reason"]
                         tool_executed = "refund_order"
                         tool_result = self.backend_client.refund_order(order_id, reason)
-                        response_text = f"I have successfully processed a refund request for your order {order_id} because the item was {reason}."
+                        response_text = f"I have processed a refund request for order {order_id}."
                         session["state"] = DialogueState.IDLE
                         self._reset_workflow_context(session)
                     else:
@@ -264,22 +381,31 @@ class DialogueManager:
                 else:
                     tool_executed = "get_order_status"
                     tool_result = self.backend_client.get_order_status(order_id)
-                    if tool_result.get("success"):
-                        response_text = f"Got it. Order {order_id} is '{tool_result['status']}', handled by {tool_result['carrier']}. Delivery is scheduled for {tool_result['delivery_date']}."
-                    else:
-                        response_text = f"I'm sorry, Order ID {order_id} was not found in our records."
+                    response_text = f"Got it. Order {order_id} status is {tool_result.get('status')}."
                     session["state"] = DialogueState.IDLE
                     self._reset_workflow_context(session)
             else:
                 response_text = "I didn't hear a valid 6-digit Order ID. Could you please state your Order ID?"
 
-        # State: AWAITING_REASON
+        elif current_state == DialogueState.AWAITING_CANCEL_CONFIRM:
+            clean = text.lower().strip()
+            order_id = context.get("order_id")
+            if any(w in clean for w in ["yes", "confirm", "haan", "ha"]):
+                tool_executed = "cancel_order"
+                tool_result = self.backend_client.cancel_order(order_id)
+                response_text = f"I have successfully cancelled your order {order_id}."
+                session["state"] = DialogueState.IDLE
+                self._reset_workflow_context(session)
+            else:
+                response_text = "Okay, I will not cancel your order."
+                session["state"] = DialogueState.IDLE
+                self._reset_workflow_context(session)
+
         elif current_state == DialogueState.AWAITING_REASON:
             reason = context.get("reason", text).strip()
             if reason:
                 context["reason"] = reason
                 order_id = context.get("order_id")
-                
                 if order_id:
                     tool_executed = "refund_order"
                     tool_result = self.backend_client.refund_order(order_id, reason)
@@ -292,72 +418,28 @@ class DialogueManager:
             else:
                 response_text = "Could you please tell me the reason for the refund?"
 
-        # State: AWAITING_CANCEL_CONFIRM
-        elif current_state == DialogueState.AWAITING_CANCEL_CONFIRM:
-            clean_text = text.lower().strip()
-            order_id = context.get("order_id")
-            
-            # Simple keyword check for yes/confirm
-            positive_words = ["yes", "confirm", "haan", "ha", "sure", "okay", "ok", "हाँ", "हा"]
-            negative_words = ["no", "abort", "cancel", "nahi", "na", "ना", "नही"]
-            
-            is_positive = any(w in clean_text for w in positive_words)
-            is_negative = any(w in clean_text for w in negative_words)
-            
-            if is_positive:
-                if order_id:
-                    tool_executed = "cancel_order"
-                    tool_result = self.backend_client.cancel_order(order_id)
-                    if tool_result.get("success"):
-                        response_text = f"I have successfully cancelled your order {order_id}."
-                    else:
-                        response_text = f"I'm sorry, I failed to cancel order {order_id} because it was not found."
-                else:
-                    response_text = "I don't have a valid Order ID to cancel."
-                session["state"] = DialogueState.IDLE
-                self._reset_workflow_context(session)
-            elif is_negative:
-                response_text = "Okay, I will not cancel your order. How else can I help you today?"
-                session["state"] = DialogueState.IDLE
-                self._reset_workflow_context(session)
-            else:
-                response_text = f"Please say yes to confirm cancellation of order {order_id}, or say no to abort."
-
-        # State: AWAITING_EMAIL
         elif current_state == DialogueState.AWAITING_EMAIL:
             if "email" in context:
                 email = context["email"]
                 tool_executed = "reset_password"
                 tool_result = self.backend_client.reset_password(email)
-                response_text = f"A password reset link has been dispatched to {email}. Please verify your inbox."
+                response_text = f"A password reset link has been dispatched to {email}."
                 session["state"] = DialogueState.IDLE
                 self._reset_workflow_context(session)
             else:
                 response_text = "I couldn't catch a valid email address. What is your registered email?"
 
-        # State: AWAITING_PHONE
         elif current_state == DialogueState.AWAITING_PHONE:
             if "phone_number" in context:
-                if "address" in context:
-                    phone = context["phone_number"]
-                    address = context["address"]
-                    tool_executed = "update_address"
-                    tool_result = self.backend_client.update_address(phone, address)
-                    response_text = f"Successfully updated your delivery address to: {address}."
-                    session["state"] = DialogueState.IDLE
-                    self._reset_workflow_context(session)
-                else:
-                    session["state"] = DialogueState.AWAITING_ADDRESS
-                    response_text = "Thanks. Now, please tell me the new delivery address."
+                session["state"] = DialogueState.AWAITING_ADDRESS
+                response_text = "Thanks. Now, please tell me the new delivery address."
             else:
-                response_text = "I need your 10-digit registered phone number to proceed. Could you tell me your phone number?"
+                response_text = "I need your 10-digit registered phone number to proceed."
 
-        # State: AWAITING_ADDRESS
         elif current_state == DialogueState.AWAITING_ADDRESS:
-            address = context.get("address", text).strip()
-            if address:
-                context["address"] = address
+            if "address" in context:
                 phone = context.get("phone_number", "9876543210")
+                address = context["address"]
                 tool_executed = "update_address"
                 tool_result = self.backend_client.update_address(phone, address)
                 response_text = f"Successfully updated your address to: '{address}'."
@@ -367,18 +449,12 @@ class DialogueManager:
                 response_text = "Please tell me the new delivery address."
 
         else:
-            response_text = "How else can I help you today?"
+            response_text = "I'm here to help."
             session["state"] = DialogueState.IDLE
-            self._reset_workflow_context(session)
 
-        session["history"].append({"speaker": "assistant", "text": response_text})
-        
-        next_state = session["state"]
-        logger.debug("State transition: %s -> %s", current_state, next_state)
-        logger.debug("---------------------------")
-        
+        session["history"].append({"role": "model", "text": response_text})
         return {
-            "response": response_text, 
+            "response": response_text,
             "state": session["state"],
             "tool_executed": tool_executed,
             "tool_result": tool_result
