@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vani – Multilingual Voice AI Support</title>
+    <title>Vani – Multilingual Voice AI Customer Support</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,7 +11,7 @@
     <style>
         :root {
             --bg-color: #0b0d19;
-            --card-bg: rgba(20, 24, 46, 0.65);
+            --card-bg: rgba(20, 24, 46, 0.6);
             --border-color: rgba(255, 255, 255, 0.08);
             --primary-glow: linear-gradient(135deg, #6366f1, #3b82f6);
             --primary-color: #6366f1;
@@ -43,12 +43,12 @@
         }
 
         header {
-            padding: 1.25rem 2.5rem;
+            padding: 1.5rem 3rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--border-color);
-            background: rgba(11, 13, 25, 0.85);
+            background: rgba(11, 13, 25, 0.8);
             backdrop-filter: blur(12px);
             z-index: 10;
         }
@@ -66,58 +66,6 @@
             font-size: 0.85rem;
             color: var(--text-muted);
             margin-top: 2px;
-        }
-
-        .header-controls {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
-        .toggle-container {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            background: rgba(255, 255, 255, 0.04);
-            padding: 0.35rem 0.85rem;
-            border-radius: 20px;
-            border: 1px solid var(--border-color);
-            cursor: pointer;
-        }
-
-        .toggle-switch {
-            position: relative;
-            width: 36px;
-            height: 20px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            transition: background 0.3s;
-        }
-
-        .toggle-switch::after {
-            content: '';
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            width: 16px;
-            height: 16px;
-            background: white;
-            border-radius: 50%;
-            transition: transform 0.3s;
-        }
-
-        .toggle-checkbox {
-            display: none;
-        }
-
-        .toggle-checkbox:checked + .toggle-switch {
-            background: var(--primary-color);
-        }
-
-        .toggle-checkbox:checked + .toggle-switch::after {
-            transform: translateX(16px);
         }
 
         .status-badge {
@@ -144,12 +92,12 @@
 
         main {
             flex-grow: 1;
-            max-width: 1200px;
+            max-width: 1280px;
             width: 100%;
             margin: 0 auto;
-            padding: 2rem 1.5rem;
+            padding: 2rem;
             display: grid;
-            grid-template-columns: 1fr 1.5fr;
+            grid-template-columns: 1.4fr 1fr;
             gap: 2rem;
             align-items: start;
         }
@@ -158,71 +106,154 @@
             background: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 20px;
-            padding: 1.75rem;
+            padding: 1.5rem;
             backdrop-filter: blur(16px);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-            transition: all 0.3s ease;
-        }
-
-        .glass-card:hover {
-            border-color: rgba(99, 102, 241, 0.2);
         }
 
         .card-title {
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             font-weight: 600;
-            margin-bottom: 1.25rem;
+            margin-bottom: 1rem;
             color: var(--text-main);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .control-panel {
+        /* --- Interactive Chat Box Styling --- */
+        .chat-container {
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 1rem;
         }
 
-        .form-group {
+        .chat-header-bar {
             display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 0.75rem 1.25rem;
+            border-radius: 16px;
         }
 
-        label {
+        .chat-status-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .lang-badge {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #818cf8;
+            border-radius: 100px;
+            padding: 0.35rem 0.9rem;
             font-size: 0.8rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 600;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        input[type="text"] {
+        .chat-messages-area {
+            height: 380px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1.25rem;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            scroll-behavior: smooth;
+        }
+
+        .chat-messages-area::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-messages-area::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .chat-bubble {
+            max-width: 82%;
+            padding: 0.95rem 1.25rem;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .chat-bubble.assistant {
+            align-self: flex-start;
+            background: #181d36;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #e2e8f0;
+            border-radius: 18px 18px 18px 4px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .chat-bubble.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #4f46e5, #3b82f6);
+            color: #ffffff;
+            border-radius: 18px 18px 4px 18px;
+            box-shadow: 0 4px 20px rgba(79, 70, 229, 0.35);
+            font-weight: 500;
+        }
+
+        /* Controls Area */
+        .chat-input-bar {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .text-input-field {
+            flex-grow: 1;
             background: rgba(255, 255, 255, 0.04);
             border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            padding: 0.75rem 1.25rem;
             color: var(--text-main);
             font-family: var(--font-family);
             font-size: 0.95rem;
             transition: all 0.3s ease;
         }
 
-        input[type="text"]:focus {
+        .text-input-field:focus {
             outline: none;
             border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
         }
 
         .btn {
             font-family: var(--font-family);
             font-weight: 600;
-            padding: 0.6rem 1.2rem;
-            border-radius: 8px;
+            padding: 0.75rem 1.25rem;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.2s ease;
             text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-glow);
+            color: white;
             border: none;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
         }
 
         .btn-secondary {
@@ -235,283 +266,177 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
-        /* Voice Gate */
-        .recorder-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1.25rem;
-            padding: 0.5rem 0;
-        }
-
-        .record-trigger {
-            width: 110px;
-            height: 110px;
+        /* Mic Button */
+        .mic-btn {
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
-            background: rgba(99, 102, 241, 0.12);
-            border: 3px solid var(--primary-color);
+            background: rgba(99, 102, 241, 0.15);
+            border: 2px solid var(--primary-color);
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            position: relative;
+            flex-shrink: 0;
             transition: all 0.3s ease;
-            gap: 4px;
         }
 
-        .record-trigger::before {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            border: 1px solid var(--primary-color);
-            opacity: 0.5;
-            animation: ripple 2s infinite ease-out;
-            pointer-events: none;
-        }
-
-        .record-trigger.recording {
-            background: rgba(244, 63, 94, 0.15);
+        .mic-btn.recording {
+            background: rgba(244, 63, 94, 0.2);
             border-color: var(--accent-color);
-        }
-
-        .record-trigger.recording::before {
-            border-color: var(--accent-color);
-        }
-
-        .record-label {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-main);
+            animation: pulse 1s infinite alternate;
         }
 
         .mic-icon {
-            width: 32px;
-            height: 32px;
+            width: 22px;
+            height: 22px;
             fill: var(--primary-color);
-            transition: fill 0.3s ease;
         }
 
-        .record-trigger.recording .mic-icon {
+        .mic-btn.recording .mic-icon {
             fill: var(--accent-color);
-            animation: pulse 1s infinite alternate;
         }
 
-        .wave-container {
-            display: none;
-            height: 20px;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .record-trigger.recording ~ .wave-container {
-            display: flex;
-        }
-
-        .wave-bar {
-            width: 3px;
-            height: 8px;
-            background-color: var(--accent-color);
-            border-radius: 10px;
-            animation: waveBounce 0.8s ease-in-out infinite alternate;
-        }
-
-        .wave-bar:nth-child(2) { animation-delay: 0.15s; }
-        .wave-bar:nth-child(3) { animation-delay: 0.3s; }
-        .wave-bar:nth-child(4) { animation-delay: 0.45s; }
-        .wave-bar:nth-child(5) { animation-delay: 0.6s; }
-
-        .recorder-status {
-            font-size: 0.95rem;
-            font-weight: 500;
-            color: var(--text-main);
-        }
-
-        .upload-section {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            border-top: 1px dashed var(--border-color);
-            padding-top: 1.25rem;
-            width: 100%;
-        }
-
-        /* Conversation Hub */
-        .chat-hub {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .status-tracker {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.025);
-            border: 1px solid var(--border-color);
-            padding: 0.85rem 1.25rem;
-            border-radius: 14px;
-            font-size: 0.95rem;
-            color: var(--text-main);
-        }
-
-        .status-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .status-tracker-dot {
-            width: 10px;
-            height: 10px;
-            background-color: var(--success-color);
-            border-radius: 50%;
-            box-shadow: 0 0 8px var(--success-color);
-        }
-
-        .status-tracker-dot.processing {
-            background-color: var(--primary-color);
-            box-shadow: 0 0 8px var(--primary-color);
-            animation: pulse 1s infinite alternate;
-        }
-
-        .status-tracker-dot.listening {
-            background-color: var(--accent-color);
-            box-shadow: 0 0 8px var(--accent-color);
-            animation: pulse 1s infinite alternate;
-        }
-
-        .lang-badge {
-            font-size: 0.8rem;
-            background: rgba(99, 102, 241, 0.12);
-            color: #818cf8;
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            border: 1px solid rgba(99, 102, 241, 0.25);
-            font-weight: 500;
-        }
-
-        .chat-container {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            height: 420px;
-            overflow-y: auto;
-            padding: 1.25rem;
-            background: rgba(0, 0, 0, 0.15);
+        /* Voice Playback Card */
+        .playback-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
             border-radius: 16px;
-            border: 1px solid var(--border-color);
-        }
-
-        .chat-bubble {
-            max-width: 82%;
-            padding: 0.85rem 1.2rem;
-            border-radius: 16px;
-            font-size: 0.98rem;
-            line-height: 1.45;
-            animation: bubbleFade 0.25s ease-out forwards;
-        }
-
-        .chat-bubble.user {
-            background: var(--primary-glow);
-            color: white;
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
-        }
-
-        .chat-bubble.assistant {
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text-main);
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-            border: 1px solid var(--border-color);
-        }
-
-        .chat-status-msg {
-            align-self: center;
-            font-size: 0.85rem;
-            color: #818cf8;
-            background: rgba(99, 102, 241, 0.08);
-            padding: 0.35rem 0.9rem;
-            border-radius: 20px;
-            border: 1px solid rgba(99, 102, 241, 0.18);
+            padding: 0.9rem 1.25rem;
             display: flex;
-            align-items: center;
-            gap: 8px;
-            animation: bubbleFade 0.2s ease-out forwards;
+            flex-direction: column;
+            gap: 0.5rem;
         }
 
-        /* Loading Spinner Dots */
-        .loading-dots {
-            display: inline-flex;
-            gap: 4px;
-        }
-        .loading-dots span {
-            width: 4px;
-            height: 4px;
-            background: #818cf8;
-            border-radius: 50%;
-            animation: dotsBounce 1.4s infinite ease-in-out both;
-        }
-        .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
-        .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
-
-        @keyframes dotsBounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
-        }
-
-        /* Developer Mode Panel */
-        .dev-panel {
-            display: none;
-            background: rgba(0, 0, 0, 0.25);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1rem;
-            font-family: monospace;
-            font-size: 0.82rem;
+        .playback-label {
+            font-size: 0.75rem;
             color: var(--text-muted);
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .audio-playback-card {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1rem;
-            display: none;
-            flex-direction: column;
-            gap: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
         }
 
         audio {
             width: 100%;
-            height: 34px;
+            height: 36px;
+            border-radius: 8px;
         }
 
-        /* Animations */
-        @keyframes ripple {
-            0% { transform: scale(1); opacity: 0.6; }
-            100% { transform: scale(1.4); opacity: 0; }
+        /* --- Right Side Visualizer Cards --- */
+        .pipeline-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .pipeline-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            transition: border-color 0.2s ease;
+        }
+
+        .pipeline-card.active {
+            border-color: rgba(99, 102, 241, 0.4);
+            background: rgba(99, 102, 241, 0.02);
+        }
+
+        .pipeline-card.success {
+            border-color: rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.01);
+        }
+
+        .step-number {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-muted);
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            flex-shrink: 0;
+            border: 1px solid var(--border-color);
+        }
+
+        .pipeline-card.active .step-number {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .pipeline-card.success .step-number {
+            background: var(--success-color);
+            color: white;
+            border-color: var(--success-color);
+        }
+
+        .step-content {
+            flex-grow: 1;
+        }
+
+        .step-title {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 0.35rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .step-badge {
+            font-size: 0.72rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .pipeline-card.success .step-badge {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .step-result {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+
+        .result-highlight {
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .entity-tag {
+            display: inline-block;
+            background: rgba(99, 102, 241, 0.12);
+            color: #c7d2fe;
+            font-size: 0.78rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            margin-right: 0.4rem;
+            margin-top: 0.2rem;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(1.08); opacity: 1; }
-        }
-
-        @keyframes waveBounce {
-            0% { height: 5px; }
-            100% { height: 20px; }
-        }
-
-        @keyframes bubbleFade {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            0% { transform: scale(1); }
+            100% { transform: scale(1.06); }
         }
 
         footer {
@@ -527,7 +452,7 @@
                 grid-template-columns: 1fr;
             }
             header {
-                padding: 1rem 1.5rem;
+                padding: 1.25rem 1.5rem;
             }
         }
     </style>
@@ -537,116 +462,159 @@
     <header>
         <div class="logo-section">
             <h1>Vani</h1>
-            <p>Multilingual Voice AI Customer Support</p>
+            <p>Multilingual Voice AI Customer Support Agent</p>
         </div>
-        
-        <div class="header-controls">
-            <!-- Developer Mode Toggle Switch -->
-            <label class="toggle-container" title="Toggle Developer Mode debugging details">
-                <input type="checkbox" id="dev-toggle" class="toggle-checkbox" onchange="toggleDevMode()">
-                <div class="toggle-switch"></div>
-                <span>Developer Mode</span>
-            </label>
-
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Session:</label>
+                <input type="text" id="session-id" value="support_session_demo" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.35rem 0.75rem; color: var(--text-main); font-size: 0.85rem; width: 160px;" placeholder="Session ID">
+                <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="resetSession()">Reset</button>
+            </div>
             <div class="status-badge">
                 <div class="status-dot"></div>
-                <span>System Online</span>
+                <span>E2E Slice Connected</span>
             </div>
         </div>
     </header>
 
     <main>
-        <!-- Left Column: Voice inputs -->
-        <div class="control-panel">
+        <!-- Left Side: Multimodal Chatbox -->
+        <div class="chat-container">
             <div class="glass-card">
-                <div class="card-title">
-                    <span>Customer Session</span>
-                    <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="resetSession()">Start New Conversation</button>
+                <!-- Status Top Bar -->
+                <div class="chat-header-bar">
+                    <div class="chat-status-group">
+                        <div class="status-dot"></div>
+                        <span id="chat-status-text">Ready to assist you</span>
+                    </div>
+                    <div class="lang-badge" id="lang-badge">
+                        🌐 Language: English (100%)
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="session-id">Session Identifier</label>
-                    <input type="text" id="session-id" value="support_user_demo" placeholder="Enter session identifier">
-                </div>
-            </div>
 
-            <div class="glass-card" style="text-align: center;">
-                <div class="card-title" style="justify-content: center;">
-                    <span>Voice Portal</span>
+                <!-- Chat History Window -->
+                <div class="chat-messages-area" id="chat-history">
+                    <div class="chat-bubble assistant">
+                        Hello! I am Vani, your virtual customer support representative. How can I assist you today?
+                    </div>
                 </div>
-                
-                <div class="recorder-section">
-                    <button class="record-trigger" id="record-btn" onclick="toggleRecording()">
+
+                <!-- Multimodal Input Gateway (Speak & Write) -->
+                <div class="chat-input-bar">
+                    <button class="mic-btn" id="record-btn" onclick="toggleRecording()" title="Click to speak">
                         <svg class="mic-icon" viewBox="0 0 24 24">
                             <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
                         </svg>
-                        <span class="record-label" id="record-btn-label">Start Talking</span>
                     </button>
                     
-                    <div class="wave-container">
-                        <div class="wave-bar"></div>
-                        <div class="wave-bar"></div>
-                        <div class="wave-bar"></div>
-                        <div class="wave-bar"></div>
-                        <div class="wave-bar"></div>
-                    </div>
-
-                    <div class="recorder-status" id="record-status">Click microphone to speak</div>
+                    <input type="text" class="text-input-field" id="text-input" placeholder="Type your message here or click mic to speak..." onkeypress="handleKeyPress(event)">
+                    
+                    <button class="btn btn-primary" onclick="sendTextMessage()">Send</button>
                 </div>
 
-                <div class="upload-section">
-                    <label style="text-align: left;">Or Upload Audio File (.wav)</label>
-                    <input type="file" id="audio-file" accept=".wav" style="color: var(--text-muted); font-size: 0.85rem;" onchange="uploadAudioFile()">
+                <!-- File Upload Bar -->
+                <div style="margin-top: 0.75rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--text-muted);">
+                    <span>Or upload audio file (.wav):</span>
+                    <input type="file" id="audio-file" accept=".wav" style="color: var(--text-muted); font-size: 0.8rem;" onchange="uploadAudioFile()">
                 </div>
-            </div>
 
-            <!-- Friendly Customer Service Guide -->
-            <div class="glass-card" style="padding: 1.5rem;">
-                <div class="card-title" style="font-size: 1rem; margin-bottom: 0.75rem;">How Vani can help</div>
-                <div style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; text-align: left; display: flex; flex-direction: column; gap: 0.5rem;">
-                    <div>• <b>Order Tracking</b>: <i>"Mera order status check karo"</i></div>
-                    <div>• <b>Order Cancellation</b>: <i>"Cancel my order"</i></div>
-                    <div>• <b>Refund Inquiry</b>: <i>"I want a refund request"</i></div>
-                    <div>• <b>Address Change</b>: <i>"Update my shipping address"</i></div>
-                    <div>• <b>Password Reset</b>: <i>"Forgot my password"</i></div>
+                <!-- Voice Playback Card -->
+                <div class="playback-card">
+                    <div class="playback-label">Voice Playback</div>
+                    <audio id="audio-output" controls autoplay></audio>
                 </div>
             </div>
         </div>
 
-        <!-- Right Column: Conversation Hub -->
-        <div class="chat-hub">
-            <div class="glass-card" style="display: flex; flex-direction: column; gap: 1.25rem;">
-                
-                <!-- Status Tracker & Language Badge -->
-                <div class="status-tracker">
-                    <div class="status-left">
-                        <div class="status-tracker-dot" id="tracker-dot"></div>
-                        <span id="tracker-status">Ready to assist you</span>
+        <!-- Right Side: Pipeline Execution Visualizer -->
+        <div class="pipeline-panel">
+            <div class="glass-card">
+                <div class="card-title">Pipeline Execution Visualizer</div>
+
+                <div class="pipeline-panel">
+                    <!-- ASR -->
+                    <div class="pipeline-card" id="card-asr">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <div class="step-title">
+                                <span>Speech Recognition (ASR)</span>
+                                <span class="step-badge">Whisper</span>
+                            </div>
+                            <div class="step-result" id="res-asr">Waiting for user input...</div>
+                        </div>
                     </div>
-                    <div class="lang-badge" id="lang-badge">🌐 Language: Auto</div>
+
+                    <!-- NLU Intent -->
+                    <div class="pipeline-card" id="card-nlu-intent">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <div class="step-title">
+                                <span>Intent Detection</span>
+                                <span class="step-badge">Classifier</span>
+                            </div>
+                            <div class="step-result" id="res-nlu-intent">Pending input...</div>
+                        </div>
+                    </div>
+
+                    <!-- NLU Entities -->
+                    <div class="pipeline-card" id="card-nlu-entities">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <div class="step-title">
+                                <span>Entity Extraction</span>
+                                <span class="step-badge">Regex / LLM</span>
+                            </div>
+                            <div class="step-result" id="res-nlu-entities">Pending input...</div>
+                        </div>
+                    </div>
+
+                    <!-- Dialogue -->
+                    <div class="pipeline-card" id="card-dialogue">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <div class="step-title">
+                                <span>Dialogue State Manager</span>
+                                <span class="step-badge">State Machine</span>
+                            </div>
+                            <div class="step-result" id="res-dialogue">Pending state transition...</div>
+                        </div>
+                    </div>
+
+                    <!-- Backend Tool -->
+                    <div class="pipeline-card" id="card-tool">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            <div class="step-title">
+                                <span>Backend Tool Integration</span>
+                                <span class="step-badge">Business APIs</span>
+                            </div>
+                            <div class="step-result" id="res-tool">No tool call triggered yet.</div>
+                        </div>
+                    </div>
+
+                    <!-- TTS -->
+                    <div class="pipeline-card" id="card-tts">
+                        <div class="step-number">6</div>
+                        <div class="step-content">
+                            <div class="step-title">
+                                <span>Text-To-Speech (TTS)</span>
+                                <span class="step-badge">ElevenLabs / gTTS</span>
+                            </div>
+                            <div class="step-result" id="res-tts">Pending audio synthesis...</div>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Chat History Log -->
-                <div class="chat-container" id="chat-history">
-                    <div class="chat-bubble assistant">Hello! I am Vani, your virtual customer support representative. How can I assist you today?</div>
-                </div>
-
-                <!-- Developer Mode Output (Hidden by Default) -->
-                <div class="dev-panel" id="dev-panel">
-                    <div style="font-weight: bold; color: #818cf8; margin-bottom: 4px;">🛠️ Developer Mode Telemetry</div>
-                    <div id="dev-content">No active turn telemetry recorded yet.</div>
-                </div>
-
-                <!-- Playback Card -->
-                <div class="audio-playback-card" id="playback-card">
-                    <label>Voice Playback</label>
-                    <audio id="audio-output" controls autoplay></audio>
+                <!-- Trace URL -->
+                <div style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 0.75rem; display: none;" id="trace-container">
+                    <a href="#" id="trace-link" target="_blank" style="color: var(--primary-color); font-size: 0.85rem; text-decoration: none;">View Trace in Langfuse ↗</a>
                 </div>
             </div>
         </div>
     </main>
 
     <footer>
-        <p>&copy; 2026 Vani Multilingual Customer Support Representative Portal.</p>
+        <p>&copy; 2026 Vani Project. Multilingual Voice & Chat AI Customer Support Agent.</p>
     </footer>
 
     <script>
@@ -654,62 +622,106 @@
         let audioChunks = [];
         let isRecording = false;
         let activeStream = null;
-        let audioCtx = null;
-        let analyser = null;
-        let animId = null;
 
-        function toggleDevMode() {
-            const isDev = document.getElementById("dev-toggle").checked;
-            const devPanel = document.getElementById("dev-panel");
-            devPanel.style.display = isDev ? "flex" : "none";
-        }
-
-        function setStatus(statusType, text) {
-            const dot = document.getElementById("tracker-dot");
-            const label = document.getElementById("tracker-status");
-            
-            dot.className = "status-tracker-dot " + statusType;
-            label.innerHTML = text;
-        }
-
-        function addChatBubble(text, sender) {
-            const chatHistory = document.getElementById("chat-history");
+        function appendChatBubble(role, text) {
+            const historyArea = document.getElementById("chat-history");
             const bubble = document.createElement("div");
-            bubble.className = "chat-bubble " + sender;
+            bubble.className = "chat-bubble " + role;
             bubble.innerText = text;
-            chatHistory.appendChild(bubble);
-            chatHistory.scrollTop = chatHistory.scrollHeight;
+            historyArea.appendChild(bubble);
+            historyArea.scrollTop = historyArea.scrollHeight;
         }
 
-        function addStatusMsg(text) {
-            const chatHistory = document.getElementById("chat-history");
-            const msg = document.createElement("div");
-            msg.className = "chat-status-msg";
-            msg.innerHTML = text + ' <div class="loading-dots"><span></span><span></span><span></span></div>';
-            msg.id = "active-status-msg";
-            chatHistory.appendChild(msg);
-            chatHistory.scrollTop = chatHistory.scrollHeight;
+        function setChatStatus(statusText, isProcessing = false) {
+            const el = document.getElementById("chat-status-text");
+            el.innerText = statusText;
         }
 
-        function removeActiveStatusMsg() {
-            const msg = document.getElementById("active-status-msg");
-            if (msg) msg.remove();
+        function setLanguageBadge(language, probability) {
+            const badge = document.getElementById("lang-badge");
+            const langUpper = (language || "en").toUpperCase();
+            const pct = Math.round((probability || 1.0) * 100);
+            
+            let displayLang = langUpper;
+            if (langUpper === "HI") displayLang = "Hindi";
+            else if (langUpper === "EN") displayLang = "English";
+            
+            badge.innerText = `🌐 Language: ${displayLang} (${pct}%)`;
+        }
+
+        function updateCard(cardId, status, contentHtml) {
+            const card = document.getElementById(cardId);
+            card.className = "pipeline-card " + status;
+            const resEl = card.querySelector(".step-result");
+            resEl.innerHTML = contentHtml;
+        }
+
+        function resetPipelineUI() {
+            updateCard("card-asr", "active", "Processing speech transcription...");
+            updateCard("card-nlu-intent", "", "Pending transcription...");
+            updateCard("card-nlu-entities", "", "Pending transcription...");
+            updateCard("card-dialogue", "", "Pending state transition...");
+            updateCard("card-tool", "", "No tool call triggered yet.");
+            updateCard("card-tts", "", "Pending audio synthesis...");
         }
 
         function resetSession() {
+            const historyArea = document.getElementById("chat-history");
+            historyArea.innerHTML = `
+                <div class="chat-bubble assistant">
+                    Hello! I am Vani, your virtual customer support representative. How can I assist you today?
+                </div>
+            `;
+            updateCard("card-asr", "", "Waiting for user input...");
+            updateCard("card-nlu-intent", "", "Pending input...");
+            updateCard("card-nlu-entities", "", "Pending input...");
+            updateCard("card-dialogue", "", "Dialogue context reset.");
+            updateCard("card-tool", "", "No tool call triggered yet.");
+            updateCard("card-tts", "", "Pending audio synthesis...");
+            setChatStatus("Ready to assist you");
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === "Enter") {
+                sendTextMessage();
+            }
+        }
+
+        async function sendTextMessage() {
+            const inputEl = document.getElementById("text-input");
+            const text = inputEl.value.trim();
+            if (!text) return;
+
+            inputEl.value = "";
+            appendChatBubble("user", text);
+            setChatStatus("Processing message...", true);
+            
+            updateCard("card-asr", "success", `Text Input: <span class="result-highlight">"${text}"</span>`);
+
             const sessionId = document.getElementById("session-id").value;
-            const chatHistory = document.getElementById("chat-history");
-            chatHistory.innerHTML = '<div class="chat-bubble assistant">Hello! I am Vani, your virtual customer support representative. How can I assist you today?</div>';
-            document.getElementById("playback-card").style.display = "none";
-            document.getElementById("lang-badge").innerText = "🌐 Language: Auto";
-            setStatus("", "Ready to assist you");
-            alert("New conversation session started.");
+            const apiEndpoint = (window.location.protocol.startsWith('http') && window.location.port === '8000') 
+                ? '/api/v1/text/process' 
+                : 'http://127.0.0.1:8000/api/v1/text/process';
+
+            try {
+                const res = await fetch(apiEndpoint, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: text, session_id: sessionId })
+                });
+
+                if (!res.ok) throw new Error("Server error: " + res.status);
+                const data = await res.json();
+                renderPipelineResults(data, text);
+            } catch (err) {
+                console.error("Text pipeline error:", err);
+                appendChatBubble("assistant", "Sorry, I encountered an error processing your message.");
+                setChatStatus("Error processing message");
+            }
         }
 
         async function toggleRecording() {
             const btn = document.getElementById("record-btn");
-            const btnLabel = document.getElementById("record-btn-label");
-            const statusText = document.getElementById("record-status");
 
             if (!isRecording) {
                 audioChunks = [];
@@ -717,72 +729,30 @@
                     activeStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     mediaRecorder = new MediaRecorder(activeStream);
                     
-                    try {
-                        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                        const source = audioCtx.createMediaStreamSource(activeStream);
-                        analyser = audioCtx.createAnalyser();
-                        analyser.fftSize = 64;
-                        source.connect(analyser);
-                        
-                        const bars = document.querySelectorAll(".wave-bar");
-                        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                        
-                        function monitorVolume() {
-                            if (!isRecording) return;
-                            analyser.getByteFrequencyData(dataArray);
-                            let sum = 0;
-                            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-                            let avg = sum / dataArray.length;
-                            
-                            bars.forEach((bar) => {
-                                let h = Math.max(5, Math.min(28, (avg / 3) + Math.random() * 5));
-                                bar.style.height = `${h}px`;
-                            });
-                            animId = requestAnimationFrame(monitorVolume);
-                        }
-                        monitorVolume();
-                    } catch (e) {
-                        console.warn("Web Audio meter init skipped:", e);
-                    }
-
                     mediaRecorder.ondataavailable = e => {
-                        if (e.data && e.data.size > 0) {
-                            audioChunks.push(e.data);
-                        }
+                        if (e.data.size > 0) audioChunks.push(e.data);
                     };
 
                     mediaRecorder.onstop = () => {
-                        if (animId) cancelAnimationFrame(animId);
-                        if (audioCtx) { audioCtx.close(); audioCtx = null; }
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                         if (activeStream) {
                             activeStream.getTracks().forEach(track => track.stop());
-                            activeStream = null;
                         }
-                        
-                        const mime = mediaRecorder.mimeType || 'audio/webm';
-                        const audioBlob = new Blob(audioChunks, { type: mime });
                         uploadAudioBlob(audioBlob);
                     };
 
-                    mediaRecorder.start(250);
+                    mediaRecorder.start();
                     isRecording = true;
                     btn.classList.add("recording");
-                    btnLabel.innerText = "Stop Talking";
-                    statusText.innerText = "Listening...";
-                    setStatus("listening", "🎤 Listening...");
+                    setChatStatus("Listening... (Speak into microphone)", true);
                 } catch (err) {
-                    console.error("Mic access error:", err);
-                    statusText.innerText = "Mic access denied.";
-                    setStatus("", "Microphone unavailable");
+                    console.error("Microphone access failed:", err);
                     alert("Microphone Error: Please allow microphone permissions in your browser.");
                 }
             } else {
                 isRecording = false;
                 btn.classList.remove("recording");
-                btnLabel.innerText = "Start Talking";
-                statusText.innerText = "Processing...";
-                setStatus("processing", "📝 Understanding your request...");
-                addStatusMsg("📝 Understanding your request...");
+                setChatStatus("Processing speech...", true);
                 if (mediaRecorder && mediaRecorder.state !== "inactive") {
                     mediaRecorder.stop();
                 }
@@ -790,10 +760,11 @@
         }
 
         function uploadAudioBlob(blob) {
+            resetPipelineUI();
+            
             if (!blob || blob.size < 100) {
-                removeActiveStatusMsg();
-                document.getElementById("record-status").innerText = "Recording was too short.";
-                setStatus("", "Ready to assist you");
+                setChatStatus("Recording too short. Please speak clearly.");
+                updateCard("card-asr", "error", "Audio payload empty or too short.");
                 return;
             }
             
@@ -812,61 +783,17 @@
                 body: formData
             })
             .then(res => {
-                if (!res.ok) throw new Error("Server response: " + res.status);
+                if (!res.ok) throw new Error("Server response code: " + res.status);
                 return res.json();
             })
             .then(data => {
-                removeActiveStatusMsg();
-
-                // Update Language Indicator Badge
-                let langName = "English";
-                if (data.language === "hi") langName = "Hindi";
-                else if (data.language === "hinglish") langName = "Hinglish";
-                let prob = data.language_probability ? ` (${Math.round(data.language_probability * 100)}%)` : '';
-                document.getElementById("lang-badge").innerText = `🌐 Language: ${langName}${prob}`;
-
-                // Append user transcript
-                if (data.transcript && data.transcript !== "[Silence]") {
-                    addChatBubble(data.transcript, "user");
-                }
-                
-                // Show friendly intermediate indicator
-                if (data.backend_tool_executed) {
-                    setStatus("processing", "🔍 Looking up your information...");
-                } else {
-                    setStatus("processing", "💬 Preparing your reply...");
-                }
-
-                // Append assistant response
-                addChatBubble(data.response_text, "assistant");
-                
-                // Update Telemetry for Developer Mode
-                document.getElementById("dev-content").innerHTML = `
-                    <div><b>Intent:</b> ${data.intent} (${data.intent_confidence})</div>
-                    <div><b>Entities:</b> ${JSON.stringify(data.entities)}</div>
-                    <div><b>State:</b> ${data.dialogue_state}</div>
-                    <div><b>Tool Executed:</b> ${data.backend_tool_executed || 'None'}</div>
-                    ${data.trace_url ? `<div><a href="${data.trace_url}" target="_blank" style="color:#818cf8;">View Langfuse Trace ↗</a></div>` : ''}
-                `;
-
-                // Play audio response
-                const audioOut = document.getElementById("audio-output");
-                audioOut.src = `data:audio/wav;base64,${data.audio_response_base64}`;
-                document.getElementById("playback-card").style.display = "flex";
-                
-                setStatus("processing", "🔊 Speaking...");
-                audioOut.onended = () => {
-                    setStatus("", "Ready to assist you");
-                };
-                
-                document.getElementById("record-status").innerText = "Click microphone to speak";
+                appendChatBubble("user", `🎙️ [Voice]: "${data.transcript}"`);
+                renderPipelineResults(data, data.transcript);
             })
             .catch(err => {
-                removeActiveStatusMsg();
-                console.error("Pipeline failure:", err);
-                addChatBubble("I didn't hear anything clearly. Please speak into your microphone again.", "assistant");
-                setStatus("", "Ready to assist you");
-                document.getElementById("record-status").innerText = "Click microphone to speak";
+                console.error("Voice processing failed:", err);
+                updateCard("card-asr", "error", `Audio Processing Issue: ${err.message || err}`);
+                setChatStatus("Failed to process voice");
             });
         }
 
@@ -874,9 +801,57 @@
             const fileInput = document.getElementById("audio-file");
             if (fileInput.files.length === 0) return;
             const file = fileInput.files[0];
-            setStatus("processing", "📝 Understanding your request...");
-            addStatusMsg("📝 Understanding your request...");
             uploadAudioBlob(file);
+        }
+
+        function renderPipelineResults(data, inputTranscript) {
+            // Append assistant reply to Chat Bubble history
+            appendChatBubble("assistant", data.response_text);
+            setChatStatus("Ready to assist you");
+
+            // Language Badge
+            setLanguageBadge(data.language, data.language_probability);
+
+            // 1. ASR
+            let langInfo = data.language ? ` <span class="step-badge" style="background: rgba(99, 102, 241, 0.2); color: #818cf8;">Lang: ${(data.language||'en').toUpperCase()} (${Math.round((data.language_probability||1.0)*100)}%)</span>` : '';
+            updateCard("card-asr", "success", `Transcribed: <span class="result-highlight">"${data.transcript}"</span>${langInfo}`);
+            
+            // 2. Intent
+            updateCard("card-nlu-intent", "success", `Intent: <span class="result-highlight">${data.intent}</span> (Confidence: ${data.intent_confidence})`);
+            
+            // 3. Entities
+            let entityHtml = "No entities found.";
+            if (data.entities && Object.keys(data.entities).length > 0) {
+                entityHtml = Object.entries(data.entities)
+                    .filter(([_, v]) => v !== null)
+                    .map(([k, v]) => `<span class="entity-tag">${k}: ${v}</span>`)
+                    .join("");
+                if (!entityHtml) entityHtml = "No entities found.";
+            }
+            updateCard("card-nlu-entities", "success", entityHtml);
+            
+            // 4. Dialogue state
+            updateCard("card-dialogue", "success", `Response: <span class="result-highlight">"${data.response_text}"</span><br><br>State: <span class="step-badge">${data.dialogue_state}</span>`);
+            
+            // 5. Tool execution
+            if (data.backend_tool_executed) {
+                let toolDetails = `Executed tool: <span class="result-highlight">${data.backend_tool_executed}</span><br><br>`;
+                toolDetails += `Result: <code style="background: rgba(255,255,255,0.06); padding: 4px; border-radius: 4px; font-size: 0.85rem;">${JSON.stringify(data.backend_tool_result)}</code>`;
+                updateCard("card-tool", "success", toolDetails);
+            } else {
+                updateCard("card-tool", "", "No tool call triggered on this turn.");
+            }
+            
+            // 6. TTS response audio playback
+            updateCard("card-tts", "success", "Audio synthesis ready.");
+            const audioOut = document.getElementById("audio-output");
+            audioOut.src = `data:audio/wav;base64,${data.audio_response_base64}`;
+
+            // Trace URL
+            if (data.trace_url) {
+                document.getElementById("trace-container").style.display = "block";
+                document.getElementById("trace-link").href = data.trace_url;
+            }
         }
     </script>
 </body>

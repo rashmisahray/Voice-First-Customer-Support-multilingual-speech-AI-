@@ -6,8 +6,6 @@ from typing import Dict, Any, List, Optional
 from enum import Enum
 from src.core.config import settings
 from src.tools.backend_client import BackendClient
-from src.nlu.classifier import MockIntentClassifier
-from src.nlu.extractor import LLMEntityExtractor
 
 logger = logging.getLogger("src.dialogue.manager")
 
@@ -61,8 +59,6 @@ class DialogueManager:
     def __init__(self, backend_client: Optional[BackendClient] = None):
         self.sessions: Dict[str, Dict[str, Any]] = {}
         self.backend_client = backend_client or BackendClient()
-        self.classifier = MockIntentClassifier()
-        self.extractor = LLMEntityExtractor()
         logger.info("Initializing Gemini DialogueManager.")
 
     def _get_or_create_session(self, session_id: str) -> Dict[str, Any]:
@@ -177,11 +173,13 @@ class DialogueManager:
                     session["state"] = next_state
                     
                 else:
-                    logger.warning("Gemini API error code %d: %s. Switching to local dialogue fallback.", resp.status_code, resp.text)
-                    return self._process_fallback_turn("unknown", {}, text, session)
+                    logger.error("Gemini API returned error code %d: %s", resp.status_code, resp.text)
+                    response_text = "I'm sorry, I encountered a temporary connection issue. How can I help you?"
+                    session["state"] = DialogueState.IDLE
         except Exception as e:
-            logger.warning("Gemini turn processing failed: %s. Switching to local dialogue fallback.", e)
-            return self._process_fallback_turn("unknown", {}, text, session)
+            logger.error("Gemini turn processing failed: %s", e)
+            response_text = "I'm sorry, I had trouble processing that request. Could you say it again?"
+            session["state"] = DialogueState.IDLE
 
         # Save assistant turn to history
         session["history"].append({"role": "model", "text": response_text})
@@ -260,17 +258,7 @@ class DialogueManager:
         context = session["context"]
         current_state = session["state"]
         
-        # If intent is unknown, only classify if we are in IDLE state to avoid breaking active slot filling locks
-        if intent == "unknown" and current_state == DialogueState.IDLE:
-            nlu_res = self.classifier.classify(text)
-            intent = nlu_res["intent"]
-
-        extracted = self.extractor.extract(text)
-        for k, v in extracted.items():
-            if v is not None:
-                context[k] = v
-
-        # Merge explicitly passed entities into context
+        # Merge new entities into context
         for k, v in entities.items():
             if v is not None:
                 context[k] = v

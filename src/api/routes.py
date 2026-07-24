@@ -30,6 +30,10 @@ tts_service = MockTTS()
 # Start time marker for uptime calculation
 START_TIME = time.time()
 
+class TextProcessRequest(BaseModel):
+    text: str = Field(..., description="User input text message")
+    session_id: str = Field("default", description="Session identifier for state tracking")
+
 class VoiceProcessRequest(BaseModel):
     audio_base64: str = Field(..., description="Base64 encoded WAV audio bytes")
     session_id: str = Field("default", description="Session identifier for state tracking")
@@ -67,6 +71,95 @@ def health_check():
         uptime_seconds=round(uptime, 2)
     )
 
+@router.post("/api/v1/text/process", response_model=VoiceProcessResponse)
+@observe(name="text_process_pipeline")
+def process_text_message(payload: TextProcessRequest):
+    """
+    Multimodal Chat Processing:
+    Text Input -> Normalizer -> Dialogue Manager -> Backend Tool -> TTS -> Audio Playback.
+    """
+    logger.info("Text API: Processing chat message for session '%s': '%s'", payload.session_id, payload.text)
+    
+    raw_transcript = payload.text
+    transcript = transcript_normalizer.normalize(raw_transcript)
+    if not transcript.strip():
+        transcript = "[Silence]"
+        
+    api_key = os.environ.get("GEMINI_API_KEY")
+    dialogue_start = time.time()
+    
+    intent = "unknown"
+    confidence = 1.0
+    entities = {}
+    
+    if api_key:
+        logger.info("Text Pipeline: Routing directly to Gemini DialogueManager.")
+        dialogue_res = dialogue_manager.process_turn("unknown", {}, transcript, payload.session_id)
+        response_text = dialogue_res["response"]
+        next_state = dialogue_res["state"]
+        tool_executed = dialogue_res["tool_executed"]
+        tool_result = dialogue_res["tool_result"]
+    else:
+        session = dialogue_manager._get_or_create_session(payload.session_id)
+        current_state = session.get("state", DialogueState.IDLE)
+        
+        is_new_request = False
+        if current_state != DialogueState.IDLE:
+            temp_nlu = nlu_classifier.classify(transcript)
+            expected_workflow = session["context"].get("workflow", "unknown")
+            if temp_nlu["intent"] != "unknown" and temp_nlu["intent"] != expected_workflow and temp_nlu["confidence"] >= 0.75:
+                is_new_request = True
+                
+        if current_state == DialogueState.IDLE or is_new_request:
+            nlu_res = nlu_classifier.classify(transcript)
+            intent = nlu_res["intent"]
+            confidence = nlu_res["confidence"]
+        else:
+            intent = session["context"].get("workflow", "unknown")
+            confidence = 1.0
+            
+        entities = nlu_extractor.extract(transcript)
+        dialogue_res = dialogue_manager.process_turn(intent, entities, transcript, payload.session_id)
+        response_text = dialogue_res["response"]
+        next_state = dialogue_res["state"]
+        tool_executed = dialogue_res["tool_executed"]
+        tool_result = dialogue_res["tool_result"]
+
+    dialogue_latency_ms = (time.time() - dialogue_start) * 1000.0
+    
+    tool_success = None
+    if tool_executed:
+        if isinstance(tool_result, dict):
+            tool_success = tool_result.get("success", False)
+        else:
+            tool_success = False
+    metrics_tracker.record_turn(asr_ms=0.0, dialogue_ms=dialogue_latency_ms, tool_success=tool_success)
+    
+    # Synthesize audio for TTS
+    try:
+        response_audio_bytes = tts_service.synthesize(response_text)
+    except Exception as e:
+        logger.error("Text Pipeline Error during TTS: %s", e)
+        response_audio_bytes = b"RIFFdummybytes"
+        
+    response_audio_b64 = base64.b64encode(response_audio_bytes).decode("utf-8")
+    trace_url = get_trace_url()
+    
+    return VoiceProcessResponse(
+        transcript=transcript,
+        language="en",
+        language_probability=1.0,
+        intent=intent,
+        intent_confidence=confidence,
+        entities=entities,
+        dialogue_state=next_state,
+        response_text=response_text,
+        audio_response_base64=response_audio_b64,
+        backend_tool_executed=tool_executed,
+        backend_tool_result=tool_result,
+        trace_url=trace_url
+    )
+
 @router.post("/api/v1/voice/process", response_model=VoiceProcessResponse)
 @observe(name="voice_process_pipeline")
 def process_voice_pipeline(payload: VoiceProcessRequest):
@@ -76,7 +169,6 @@ def process_voice_pipeline(payload: VoiceProcessRequest):
     """
     logger.info("Voice API: Processing base64 audio payload for session: %s", payload.session_id)
     
-    # 1. Decode base64 audio string to raw WAV bytes
     try:
         audio_bytes = base64.b64decode(payload.audio_base64)
     except Exception as e:
@@ -96,7 +188,6 @@ async def process_voice_upload(
     """
     logger.info("Voice API: Processing uploaded file '%s' for session: %s", file.filename, session_id)
     
-    # Read audio bytes
     audio_bytes = await file.read()
     return execute_pipeline(audio_bytes, session_id)
 
@@ -176,30 +267,8 @@ def execute_pipeline(audio_bytes: bytes, session_id: str) -> VoiceProcessRespons
         logger.info("ASR transcript normalized from '%s' to '%s'", raw_transcript, transcript)
         
     # If silence or empty transcript
-    if not transcript.strip() or transcript == "[Silence]":
+    if not transcript.strip():
         transcript = "[Silence]"
-        session = dialogue_manager._get_or_create_session(session_id)
-        current_state = session.get("state", DialogueState.IDLE)
-        response_text = "I didn't hear anything. Please speak into your microphone."
-        try:
-            response_audio_bytes = tts_service.synthesize(response_text)
-        except Exception:
-            response_audio_bytes = b"RIFFdummybytes"
-            
-        return VoiceProcessResponse(
-            transcript=transcript,
-            language=detected_language,
-            language_probability=language_probability,
-            intent="unknown",
-            intent_confidence=0.0,
-            entities={},
-            dialogue_state=current_state,
-            response_text=response_text,
-            audio_response_base64=base64.b64encode(response_audio_bytes).decode("utf-8"),
-            backend_tool_executed=None,
-            backend_tool_result=None,
-            trace_url=get_trace_url()
-        )
         
     api_key = os.environ.get("GEMINI_API_KEY")
     dialogue_start = time.time()
