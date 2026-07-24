@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vani – Multilingual Voice AI Customer Support</title>
+    <title>Vani – Multilingual Voice AI Support</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,7 +11,7 @@
     <style>
         :root {
             --bg-color: #0b0d19;
-            --card-bg: rgba(20, 24, 46, 0.6);
+            --card-bg: rgba(20, 24, 46, 0.65);
             --border-color: rgba(255, 255, 255, 0.08);
             --primary-glow: linear-gradient(135deg, #6366f1, #3b82f6);
             --primary-color: #6366f1;
@@ -43,12 +43,12 @@
         }
 
         header {
-            padding: 1.5rem 4rem;
+            padding: 1.25rem 2.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--border-color);
-            background: rgba(11, 13, 25, 0.8);
+            background: rgba(11, 13, 25, 0.85);
             backdrop-filter: blur(12px);
             z-index: 10;
         }
@@ -66,6 +66,58 @@
             font-size: 0.85rem;
             color: var(--text-muted);
             margin-top: 2px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.04);
+            padding: 0.35rem 0.85rem;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 36px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle-checkbox {
+            display: none;
+        }
+
+        .toggle-checkbox:checked + .toggle-switch {
+            background: var(--primary-color);
+        }
+
+        .toggle-checkbox:checked + .toggle-switch::after {
+            transform: translateX(16px);
         }
 
         .status-badge {
@@ -95,7 +147,7 @@
             max-width: 1200px;
             width: 100%;
             margin: 0 auto;
-            padding: 2.5rem 2rem;
+            padding: 2rem 1.5rem;
             display: grid;
             grid-template-columns: 1fr 1.5fr;
             gap: 2rem;
@@ -106,7 +158,7 @@
             background: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 20px;
-            padding: 2rem;
+            padding: 1.75rem;
             backdrop-filter: blur(16px);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
             transition: all 0.3s ease;
@@ -117,7 +169,7 @@
         }
 
         .card-title {
-            font-size: 1.2rem;
+            font-size: 1.15rem;
             font-weight: 600;
             margin-bottom: 1.25rem;
             color: var(--text-main);
@@ -170,6 +222,7 @@
             cursor: pointer;
             transition: all 0.2s ease;
             text-align: center;
+            border: none;
         }
 
         .btn-secondary {
@@ -188,21 +241,23 @@
             flex-direction: column;
             align-items: center;
             gap: 1.25rem;
-            padding: 1rem 0;
+            padding: 0.5rem 0;
         }
 
         .record-trigger {
-            width: 100px;
-            height: 100px;
+            width: 110px;
+            height: 110px;
             border-radius: 50%;
-            background: rgba(99, 102, 241, 0.1);
-            border: 2px solid var(--primary-color);
+            background: rgba(99, 102, 241, 0.12);
+            border: 3px solid var(--primary-color);
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             cursor: pointer;
             position: relative;
             transition: all 0.3s ease;
+            gap: 4px;
         }
 
         .record-trigger::before {
@@ -226,9 +281,15 @@
             border-color: var(--accent-color);
         }
 
+        .record-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
         .mic-icon {
-            width: 36px;
-            height: 36px;
+            width: 32px;
+            height: 32px;
             fill: var(--primary-color);
             transition: fill 0.3s ease;
         }
@@ -263,8 +324,9 @@
         .wave-bar:nth-child(5) { animation-delay: 0.6s; }
 
         .recorder-status {
-            font-size: 0.9rem;
-            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-main);
         }
 
         .upload-section {
@@ -285,19 +347,25 @@
 
         .status-tracker {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 12px;
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(255, 255, 255, 0.025);
             border: 1px solid var(--border-color);
-            padding: 0.75rem 1.25rem;
-            border-radius: 12px;
-            font-size: 0.9rem;
+            padding: 0.85rem 1.25rem;
+            border-radius: 14px;
+            font-size: 0.95rem;
             color: var(--text-main);
         }
 
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
         .status-tracker-dot {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             background-color: var(--success-color);
             border-radius: 50%;
             box-shadow: 0 0 8px var(--success-color);
@@ -315,11 +383,21 @@
             animation: pulse 1s infinite alternate;
         }
 
+        .lang-badge {
+            font-size: 0.8rem;
+            background: rgba(99, 102, 241, 0.12);
+            color: #818cf8;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            font-weight: 500;
+        }
+
         .chat-container {
             display: flex;
             flex-direction: column;
             gap: 1rem;
-            height: 400px;
+            height: 420px;
             overflow-y: auto;
             padding: 1.25rem;
             background: rgba(0, 0, 0, 0.15);
@@ -328,11 +406,11 @@
         }
 
         .chat-bubble {
-            max-width: 80%;
-            padding: 0.8rem 1.1rem;
+            max-width: 82%;
+            padding: 0.85rem 1.2rem;
             border-radius: 16px;
-            font-size: 0.95rem;
-            line-height: 1.4;
+            font-size: 0.98rem;
+            line-height: 1.45;
             animation: bubbleFade 0.25s ease-out forwards;
         }
 
@@ -345,22 +423,59 @@
         }
 
         .chat-bubble.assistant {
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(255, 255, 255, 0.05);
             color: var(--text-main);
             align-self: flex-start;
             border-bottom-left-radius: 4px;
             border: 1px solid var(--border-color);
         }
 
-        .chat-info {
-            font-size: 0.8rem;
-            color: var(--text-muted);
+        .chat-status-msg {
             align-self: center;
-            background: rgba(255, 255, 255, 0.02);
-            padding: 0.25rem 0.75rem;
+            font-size: 0.85rem;
+            color: #818cf8;
+            background: rgba(99, 102, 241, 0.08);
+            padding: 0.35rem 0.9rem;
             border-radius: 20px;
-            margin: 0.25rem 0;
+            border: 1px solid rgba(99, 102, 241, 0.18);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: bubbleFade 0.2s ease-out forwards;
+        }
+
+        /* Loading Spinner Dots */
+        .loading-dots {
+            display: inline-flex;
+            gap: 4px;
+        }
+        .loading-dots span {
+            width: 4px;
+            height: 4px;
+            background: #818cf8;
+            border-radius: 50%;
+            animation: dotsBounce 1.4s infinite ease-in-out both;
+        }
+        .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes dotsBounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Developer Mode Panel */
+        .dev-panel {
+            display: none;
+            background: rgba(0, 0, 0, 0.25);
             border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            flex-direction: column;
+            gap: 0.5rem;
         }
 
         .audio-playback-card {
@@ -375,7 +490,7 @@
 
         audio {
             width: 100%;
-            height: 32px;
+            height: 34px;
         }
 
         /* Animations */
@@ -411,6 +526,9 @@
             main {
                 grid-template-columns: 1fr;
             }
+            header {
+                padding: 1rem 1.5rem;
+            }
         }
     </style>
 </head>
@@ -419,11 +537,21 @@
     <header>
         <div class="logo-section">
             <h1>Vani</h1>
-            <p>Multilingual Voice AI Customer Support Representative</p>
+            <p>Multilingual Voice AI Customer Support</p>
         </div>
-        <div class="status-badge">
-            <div class="status-dot"></div>
-            <span>Support Portal Active</span>
+        
+        <div class="header-controls">
+            <!-- Developer Mode Toggle Switch -->
+            <label class="toggle-container" title="Toggle Developer Mode debugging details">
+                <input type="checkbox" id="dev-toggle" class="toggle-checkbox" onchange="toggleDevMode()">
+                <div class="toggle-switch"></div>
+                <span>Developer Mode</span>
+            </label>
+
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                <span>System Online</span>
+            </div>
         </div>
     </header>
 
@@ -432,18 +560,18 @@
         <div class="control-panel">
             <div class="glass-card">
                 <div class="card-title">
-                    <span>Active Session</span>
-                    <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="resetSession()">Reset Conversation</button>
+                    <span>Customer Session</span>
+                    <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="resetSession()">Start New Conversation</button>
                 </div>
                 <div class="form-group">
-                    <label for="session-id">Customer Session ID</label>
-                    <input type="text" id="session-id" value="customer_support_demo" placeholder="Enter session identifier">
+                    <label for="session-id">Session Identifier</label>
+                    <input type="text" id="session-id" value="support_user_demo" placeholder="Enter session identifier">
                 </div>
             </div>
 
             <div class="glass-card" style="text-align: center;">
                 <div class="card-title" style="justify-content: center;">
-                    <span>Voice Input Gateway</span>
+                    <span>Voice Portal</span>
                 </div>
                 
                 <div class="recorder-section">
@@ -451,6 +579,7 @@
                         <svg class="mic-icon" viewBox="0 0 24 24">
                             <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
                         </svg>
+                        <span class="record-label" id="record-btn-label">Start Talking</span>
                     </button>
                     
                     <div class="wave-container">
@@ -461,24 +590,24 @@
                         <div class="wave-bar"></div>
                     </div>
 
-                    <div class="recorder-status" id="record-status">Click mic button to speak</div>
+                    <div class="recorder-status" id="record-status">Click microphone to speak</div>
                 </div>
 
                 <div class="upload-section">
-                    <label style="text-align: left;">Or Upload Recorded WAV File</label>
+                    <label style="text-align: left;">Or Upload Audio File (.wav)</label>
                     <input type="file" id="audio-file" accept=".wav" style="color: var(--text-muted); font-size: 0.85rem;" onchange="uploadAudioFile()">
                 </div>
             </div>
 
-            <!-- Simple Guide -->
+            <!-- Friendly Customer Service Guide -->
             <div class="glass-card" style="padding: 1.5rem;">
-                <div class="card-title" style="font-size: 1rem; margin-bottom: 0.75rem;">Support Capabilities Guide</div>
-                <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; text-align: left; display: flex; flex-direction: column; gap: 0.5rem;">
-                    <div>• <b>Order Tracking</b>: <i>"Check order status"</i></div>
-                    <div>• <b>Order Cancellation</b>: <i>"Cancel order"</i></div>
-                    <div>• <b>Refund Inquiries</b>: <i>"Request refund"</i></div>
-                    <div>• <b>Address Changes</b>: <i>"Change shipping address"</i></div>
-                    <div>• <b>Sign In Assistance</b>: <i>"Forgot password"</i></div>
+                <div class="card-title" style="font-size: 1rem; margin-bottom: 0.75rem;">How Vani can help</div>
+                <div style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.6; text-align: left; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <div>• <b>Order Tracking</b>: <i>"Mera order status check karo"</i></div>
+                    <div>• <b>Order Cancellation</b>: <i>"Cancel my order"</i></div>
+                    <div>• <b>Refund Inquiry</b>: <i>"I want a refund request"</i></div>
+                    <div>• <b>Address Change</b>: <i>"Update my shipping address"</i></div>
+                    <div>• <b>Password Reset</b>: <i>"Forgot my password"</i></div>
                 </div>
             </div>
         </div>
@@ -487,15 +616,24 @@
         <div class="chat-hub">
             <div class="glass-card" style="display: flex; flex-direction: column; gap: 1.25rem;">
                 
-                <!-- Status Tracker -->
+                <!-- Status Tracker & Language Badge -->
                 <div class="status-tracker">
-                    <div class="status-tracker-dot" id="tracker-dot"></div>
-                    <span id="tracker-status">Ready to assist you</span>
+                    <div class="status-left">
+                        <div class="status-tracker-dot" id="tracker-dot"></div>
+                        <span id="tracker-status">Ready to assist you</span>
+                    </div>
+                    <div class="lang-badge" id="lang-badge">🌐 Language: Auto</div>
                 </div>
 
                 <!-- Chat History Log -->
                 <div class="chat-container" id="chat-history">
-                    <div class="chat-bubble assistant">Hello! I am Vani, your virtual customer support representative. How can I help you today?</div>
+                    <div class="chat-bubble assistant">Hello! I am Vani, your virtual customer support representative. How can I assist you today?</div>
+                </div>
+
+                <!-- Developer Mode Output (Hidden by Default) -->
+                <div class="dev-panel" id="dev-panel">
+                    <div style="font-weight: bold; color: #818cf8; margin-bottom: 4px;">🛠️ Developer Mode Telemetry</div>
+                    <div id="dev-content">No active turn telemetry recorded yet.</div>
                 </div>
 
                 <!-- Playback Card -->
@@ -508,7 +646,7 @@
     </main>
 
     <footer>
-        <p>&copy; 2026 Vani Customer Support Representative Portal.</p>
+        <p>&copy; 2026 Vani Multilingual Customer Support Representative Portal.</p>
     </footer>
 
     <script>
@@ -520,12 +658,18 @@
         let analyser = null;
         let animId = null;
 
+        function toggleDevMode() {
+            const isDev = document.getElementById("dev-toggle").checked;
+            const devPanel = document.getElementById("dev-panel");
+            devPanel.style.display = isDev ? "flex" : "none";
+        }
+
         function setStatus(statusType, text) {
             const dot = document.getElementById("tracker-dot");
             const label = document.getElementById("tracker-status");
             
             dot.className = "status-tracker-dot " + statusType;
-            label.innerText = text;
+            label.innerHTML = text;
         }
 
         function addChatBubble(text, sender) {
@@ -537,26 +681,34 @@
             chatHistory.scrollTop = chatHistory.scrollHeight;
         }
 
-        function addInfoBubble(text) {
+        function addStatusMsg(text) {
             const chatHistory = document.getElementById("chat-history");
-            const info = document.createElement("div");
-            info.className = "chat-info";
-            info.innerText = text;
-            chatHistory.appendChild(info);
+            const msg = document.createElement("div");
+            msg.className = "chat-status-msg";
+            msg.innerHTML = text + ' <div class="loading-dots"><span></span><span></span><span></span></div>';
+            msg.id = "active-status-msg";
+            chatHistory.appendChild(msg);
             chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function removeActiveStatusMsg() {
+            const msg = document.getElementById("active-status-msg");
+            if (msg) msg.remove();
         }
 
         function resetSession() {
             const sessionId = document.getElementById("session-id").value;
             const chatHistory = document.getElementById("chat-history");
-            chatHistory.innerHTML = '<div class="chat-bubble assistant">Hello! I am Vani, your virtual customer support representative. How can I help you today?</div>';
+            chatHistory.innerHTML = '<div class="chat-bubble assistant">Hello! I am Vani, your virtual customer support representative. How can I assist you today?</div>';
             document.getElementById("playback-card").style.display = "none";
+            document.getElementById("lang-badge").innerText = "🌐 Language: Auto";
             setStatus("", "Ready to assist you");
-            alert("Session history has been reset.");
+            alert("New conversation session started.");
         }
 
         async function toggleRecording() {
             const btn = document.getElementById("record-btn");
+            const btnLabel = document.getElementById("record-btn-label");
             const statusText = document.getElementById("record-status");
 
             if (!isRecording) {
@@ -615,19 +767,22 @@
                     mediaRecorder.start(250);
                     isRecording = true;
                     btn.classList.add("recording");
+                    btnLabel.innerText = "Stop Talking";
                     statusText.innerText = "Listening...";
-                    setStatus("listening", "Listening to your voice...");
+                    setStatus("listening", "🎤 Listening...");
                 } catch (err) {
                     console.error("Mic access error:", err);
                     statusText.innerText = "Mic access denied.";
-                    setStatus("", "Microphone not available");
+                    setStatus("", "Microphone unavailable");
                     alert("Microphone Error: Please allow microphone permissions in your browser.");
                 }
             } else {
                 isRecording = false;
                 btn.classList.remove("recording");
+                btnLabel.innerText = "Start Talking";
                 statusText.innerText = "Processing...";
-                setStatus("processing", "Processing your query...");
+                setStatus("processing", "📝 Understanding your request...");
+                addStatusMsg("📝 Understanding your request...");
                 if (mediaRecorder && mediaRecorder.state !== "inactive") {
                     mediaRecorder.stop();
                 }
@@ -636,6 +791,7 @@
 
         function uploadAudioBlob(blob) {
             if (!blob || blob.size < 100) {
+                removeActiveStatusMsg();
                 document.getElementById("record-status").innerText = "Recording was too short.";
                 setStatus("", "Ready to assist you");
                 return;
@@ -660,50 +816,57 @@
                 return res.json();
             })
             .then(data => {
-                // Render conversation turns
+                removeActiveStatusMsg();
+
+                // Update Language Indicator Badge
+                let langName = "English";
+                if (data.language === "hi") langName = "Hindi";
+                else if (data.language === "hinglish") langName = "Hinglish";
+                let prob = data.language_probability ? ` (${Math.round(data.language_probability * 100)}%)` : '';
+                document.getElementById("lang-badge").innerText = `🌐 Language: ${langName}${prob}`;
+
+                // Append user transcript
                 if (data.transcript && data.transcript !== "[Silence]") {
                     addChatBubble(data.transcript, "user");
                 }
                 
-                // Expose friendly system actions instead of AI terms
+                // Show friendly intermediate indicator
                 if (data.backend_tool_executed) {
-                    if (data.backend_tool_executed === "get_order_status") {
-                        addInfoBubble("Checking order details...");
-                    } else if (data.backend_tool_executed === "update_address") {
-                        addInfoBubble("Updating your shipping profile...");
-                    } else if (data.backend_tool_executed === "cancel_order") {
-                        addInfoBubble("Processing cancellation request...");
-                    } else if (data.backend_tool_executed === "reset_password") {
-                        addInfoBubble("Verifying profile and generating reset details...");
-                    } else if (data.backend_tool_executed === "refund_order") {
-                        addInfoBubble("Processing refund request...");
-                    }
-                } else if (data.dialogue_state && data.dialogue_state !== "idle") {
-                    addInfoBubble("Found missing details, asking for clarification...");
+                    setStatus("processing", "🔍 Looking up your information...");
                 } else {
-                    addInfoBubble("I understood your request.");
+                    setStatus("processing", "💬 Preparing your reply...");
                 }
 
-                // Add assistant response
+                // Append assistant response
                 addChatBubble(data.response_text, "assistant");
                 
+                // Update Telemetry for Developer Mode
+                document.getElementById("dev-content").innerHTML = `
+                    <div><b>Intent:</b> ${data.intent} (${data.intent_confidence})</div>
+                    <div><b>Entities:</b> ${JSON.stringify(data.entities)}</div>
+                    <div><b>State:</b> ${data.dialogue_state}</div>
+                    <div><b>Tool Executed:</b> ${data.backend_tool_executed || 'None'}</div>
+                    ${data.trace_url ? `<div><a href="${data.trace_url}" target="_blank" style="color:#818cf8;">View Langfuse Trace ↗</a></div>` : ''}
+                `;
+
                 // Play audio response
                 const audioOut = document.getElementById("audio-output");
                 audioOut.src = `data:audio/wav;base64,${data.audio_response_base64}`;
                 document.getElementById("playback-card").style.display = "flex";
                 
-                setStatus("processing", "Speaking...");
+                setStatus("processing", "🔊 Speaking...");
                 audioOut.onended = () => {
                     setStatus("", "Ready to assist you");
                 };
                 
-                document.getElementById("record-status").innerText = "Click mic button to speak";
+                document.getElementById("record-status").innerText = "Click microphone to speak";
             })
             .catch(err => {
+                removeActiveStatusMsg();
                 console.error("Pipeline failure:", err);
-                addChatBubble("Sorry, I had trouble processing your query. Please make sure the server is active.", "assistant");
+                addChatBubble("I didn't hear anything clearly. Please speak into your microphone again.", "assistant");
                 setStatus("", "Ready to assist you");
-                document.getElementById("record-status").innerText = "Click mic button to speak";
+                document.getElementById("record-status").innerText = "Click microphone to speak";
             });
         }
 
@@ -711,6 +874,8 @@
             const fileInput = document.getElementById("audio-file");
             if (fileInput.files.length === 0) return;
             const file = fileInput.files[0];
+            setStatus("processing", "📝 Understanding your request...");
+            addStatusMsg("📝 Understanding your request...");
             uploadAudioBlob(file);
         }
     </script>

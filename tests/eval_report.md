@@ -1,6 +1,6 @@
 # Vani Voice AI – 100-Turn Evaluation Report
 
-Generated on: 2026-07-24 05:37:12
+Generated on: 2026-07-24 14:18:32
 Offline Evaluation Execution (Simulated Pipeline)
 
 ## Performance Benchmarks
@@ -11,8 +11,8 @@ Offline Evaluation Execution (Simulated Pipeline)
 | **Intent Classification Accuracy** | 98.00% | >= 90.0% | Passed |
 | **Task Success Rate** | 98.00% | >= 85.0% | Passed |
 | **Word Error Rate (Normalizer)** | 0.00% | <= 5.0% | Passed |
-| **Average Processing Latency** | 0.83ms | <= 300ms | Passed |
-| **95th Percentile Latency** | 5.00ms | <= 500ms | Passed |
+| **Average Processing Latency** | 1.24ms | <= 300ms | Passed |
+| **95th Percentile Latency** | 5.12ms | <= 500ms | Passed |
 
 ## Analysis & Key Takeaways
 1. **ASR Normalization**: Word error rates are extremely low (0.00%) due to exact mapping of numeric text representations and clean boundary checks.
