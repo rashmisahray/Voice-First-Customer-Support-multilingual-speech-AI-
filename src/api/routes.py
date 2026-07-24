@@ -33,6 +33,7 @@ START_TIME = time.time()
 class TextProcessRequest(BaseModel):
     text: str = Field(..., description="User input text message")
     session_id: str = Field("default", description="Session identifier for state tracking")
+    language: Optional[str] = Field("en", description="Preferred language (en, hi)")
 
 class VoiceProcessRequest(BaseModel):
     audio_base64: str = Field(..., description="Base64 encoded WAV audio bytes")
@@ -94,7 +95,7 @@ def process_text_message(payload: TextProcessRequest):
     
     if api_key:
         logger.info("Text Pipeline: Routing directly to Gemini DialogueManager.")
-        dialogue_res = dialogue_manager.process_turn("unknown", {}, transcript, payload.session_id)
+        dialogue_res = dialogue_manager.process_turn("unknown", {}, transcript, payload.session_id, language=payload.language or "en")
         response_text = dialogue_res["response"]
         next_state = dialogue_res["state"]
         tool_executed = dialogue_res["tool_executed"]
@@ -119,7 +120,7 @@ def process_text_message(payload: TextProcessRequest):
             confidence = 1.0
             
         entities = nlu_extractor.extract(transcript)
-        dialogue_res = dialogue_manager.process_turn(intent, entities, transcript, payload.session_id)
+        dialogue_res = dialogue_manager.process_turn(intent, entities, transcript, payload.session_id, language=payload.language or "en")
         response_text = dialogue_res["response"]
         next_state = dialogue_res["state"]
         tool_executed = dialogue_res["tool_executed"]
@@ -279,7 +280,7 @@ def execute_pipeline(audio_bytes: bytes, session_id: str) -> VoiceProcessRespons
     
     if api_key:
         logger.info("Optimized Pipeline: Routing directly to Gemini DialogueManager, bypassing local ASR/NLU classifier/extractor steps.")
-        dialogue_res = dialogue_manager.process_turn("unknown", {}, transcript, session_id)
+        dialogue_res = dialogue_manager.process_turn("unknown", {}, transcript, session_id, language=detected_language)
         response_text = dialogue_res["response"]
         next_state = dialogue_res["state"]
         tool_executed = dialogue_res["tool_executed"]
@@ -314,7 +315,7 @@ def execute_pipeline(audio_bytes: bytes, session_id: str) -> VoiceProcessRespons
         entities = nlu_extractor.extract(transcript)
         
         # 4. Dialogue Management & Tool Execution
-        dialogue_res = dialogue_manager.process_turn(intent, entities, transcript, session_id)
+        dialogue_res = dialogue_manager.process_turn(intent, entities, transcript, session_id, language=detected_language)
         response_text = dialogue_res["response"]
         next_state = dialogue_res["state"]
         tool_executed = dialogue_res["tool_executed"]

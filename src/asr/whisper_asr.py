@@ -11,9 +11,8 @@ logger = logging.getLogger("src.asr.whisper_asr")
 
 # Prompt priming Whisper for Indian English, Hindi, and Hinglish code-mixed customer support vocabulary
 HINGLISH_INITIAL_PROMPT = (
-    "A multilingual customer support voice conversation in Hindi, English, and Hinglish. "
-    "Main apna order status check karna chahta hoon, order ID 876543, mera password reset kar do, "
-    "email address john@example.com, user@example.com, @, at the rate, update address, phone number, namaste, dhanyawad."
+    "A multilingual customer support speech transcript in English, Hindi (हिंदी), or Hinglish (code-mixed). "
+    "Transcribe the audio exactly as spoken without translation."
 )
 
 class WhisperASR:
@@ -113,7 +112,7 @@ class WhisperASR:
             "task": "transcribe",
             "initial_prompt": HINGLISH_INITIAL_PROMPT,
             "vad_filter": True,
-            "vad_parameters": dict(min_silence_duration_ms=500)
+            "vad_parameters": dict(min_silence_duration_ms=300, speech_pad_ms=200)
         }
 
         # 1. Try fast in-memory WAV numpy parsing

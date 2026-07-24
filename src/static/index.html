@@ -466,6 +466,11 @@
         </div>
         <div style="display: flex; gap: 1rem; align-items: center;">
             <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Lang:</label>
+                <select id="lang-select" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.35rem 0.6rem; color: var(--text-main); font-size: 0.85rem; font-family: var(--font-family);">
+                    <option value="en">English 🇬🇧</option>
+                    <option value="hi">Hindi 🇮🇳 (हिंदी)</option>
+                </select>
                 <label style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Session:</label>
                 <input type="text" id="session-id" value="support_session_demo" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.35rem 0.75rem; color: var(--text-main); font-size: 0.85rem; width: 160px;" placeholder="Session ID">
                 <button class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="resetSession()">Reset</button>
@@ -692,11 +697,12 @@
             const text = inputEl.value.trim();
             if (!text) return;
 
+            const selectedLang = document.getElementById("lang-select").value;
             inputEl.value = "";
             appendChatBubble("user", text);
             setChatStatus("Processing message...", true);
             
-            updateCard("card-asr", "success", `Text Input: <span class="result-highlight">"${text}"</span>`);
+            updateCard("card-asr", "success", `Text Input (${selectedLang.toUpperCase()}): <span class="result-highlight">"${text}"</span>`);
 
             const sessionId = document.getElementById("session-id").value;
             const apiEndpoint = (window.location.protocol.startsWith('http') && window.location.port === '8000') 
@@ -707,7 +713,7 @@
                 const res = await fetch(apiEndpoint, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ text: text, session_id: sessionId })
+                    body: JSON.stringify({ text: text, session_id: sessionId, language: selectedLang })
                 });
 
                 if (!res.ok) throw new Error("Server error: " + res.status);
