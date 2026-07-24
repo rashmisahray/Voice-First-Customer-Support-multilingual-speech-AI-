@@ -176,8 +176,30 @@ def execute_pipeline(audio_bytes: bytes, session_id: str) -> VoiceProcessRespons
         logger.info("ASR transcript normalized from '%s' to '%s'", raw_transcript, transcript)
         
     # If silence or empty transcript
-    if not transcript.strip():
+    if not transcript.strip() or transcript == "[Silence]":
         transcript = "[Silence]"
+        session = dialogue_manager._get_or_create_session(session_id)
+        current_state = session.get("state", DialogueState.IDLE)
+        response_text = "I didn't hear anything. Please speak into your microphone."
+        try:
+            response_audio_bytes = tts_service.synthesize(response_text)
+        except Exception:
+            response_audio_bytes = b"RIFFdummybytes"
+            
+        return VoiceProcessResponse(
+            transcript=transcript,
+            language=detected_language,
+            language_probability=language_probability,
+            intent="unknown",
+            intent_confidence=0.0,
+            entities={},
+            dialogue_state=current_state,
+            response_text=response_text,
+            audio_response_base64=base64.b64encode(response_audio_bytes).decode("utf-8"),
+            backend_tool_executed=None,
+            backend_tool_result=None,
+            trace_url=get_trace_url()
+        )
         
     api_key = os.environ.get("GEMINI_API_KEY")
     dialogue_start = time.time()

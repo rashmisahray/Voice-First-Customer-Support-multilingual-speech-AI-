@@ -10,11 +10,7 @@ from src.core.config import settings
 logger = logging.getLogger("src.asr.whisper_asr")
 
 # Prompt priming Whisper for Indian English, Hindi, and Hinglish code-mixed customer support vocabulary
-HINGLISH_INITIAL_PROMPT = (
-    "A multilingual customer support voice conversation in Hindi, English, and Hinglish. "
-    "Main apna order status check karna chahta hoon, order ID 876543, mera password reset kar do, "
-    "email address john@example.com, user@example.com, @, at the rate, update address, phone number, namaste, dhanyawad."
-)
+HINGLISH_INITIAL_PROMPT = "Customer support voice conversation in Hindi, Hinglish, and English."
 
 class WhisperASR:
     """ASR implementation using faster-whisper supporting multilingual speech (English, Hindi, Hinglish)."""
@@ -112,6 +108,8 @@ class WhisperASR:
             "beam_size": 5,
             "task": "transcribe",
             "initial_prompt": HINGLISH_INITIAL_PROMPT,
+            "condition_on_previous_text": False,
+            "no_speech_threshold": 0.6,
             "vad_filter": True,
             "vad_parameters": dict(min_silence_duration_ms=500)
         }
